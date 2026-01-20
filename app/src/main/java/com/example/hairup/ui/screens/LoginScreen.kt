@@ -35,7 +35,7 @@ import com.example.hairup.ui.components.AppTextInput
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (Boolean) -> Unit // Boolean true for Admin, false for Client
+    onLoginSuccess: (Boolean) -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -98,7 +98,7 @@ fun LoginScreen(
             AppButton(
                 text = "Iniciar Sesión",
                 onClick = {
-                    // Mock login logic
+
                     if (email.contains("admin")) {
                         onLoginSuccess(true)
                     } else {
