@@ -26,4 +26,10 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: ChangePasswordRequest
     ): Call<Map<String, String>>
+
+    @GET("api/appointments/next")
+    fun getNextAppointment(@Header("Authorization") token: String): Call<AppointmentResponse>
+
+    @GET("api/levels")
+    fun getLevels(@Header("Authorization") token: String): Call<LevelsResponse>
 }
