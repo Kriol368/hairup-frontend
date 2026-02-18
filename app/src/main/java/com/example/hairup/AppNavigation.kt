@@ -1,10 +1,12 @@
 package com.example.hairup
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.material3.Text
+import com.example.hairup.data.SessionManager
 import com.example.hairup.ui.screens.LoginScreen
 import com.example.hairup.ui.screens.RegisterScreen
 import com.example.hairup.ui.screens.ClientHomeScreen
@@ -15,15 +17,21 @@ import com.example.hairup.ui.screens.client.LoyaltyScreen
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
 
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
             LoginScreen(
                 onLoginSuccess = { isAdmin ->
                     if (isAdmin) {
-                        navController.navigate("admin_home")
+                        navController.navigate("admin_home") {
+                            popUpTo("login") { inclusive = true }
+                        }
                     } else {
-                        navController.navigate("client_home")
+                        navController.navigate("client_home") {
+                            popUpTo("login") { inclusive = true }
+                        }
                     }
                 },
                 onNavigateToRegister = {
@@ -50,6 +58,7 @@ fun AppNavigation() {
                 onNavigateToBooking = { navController.navigate("booking") },
                 onNavigateToLoyalty = { navController.navigate("client/loyalty") },
                 onLogout = {
+                    sessionManager.logout()
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }

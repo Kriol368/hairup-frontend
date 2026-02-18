@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,23 +32,51 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.hairup.R
+import com.example.hairup.data.SessionManager
 import com.example.hairup.ui.components.AppButton
 import com.example.hairup.ui.components.AppTextInput
+import com.example.hairup.ui.viewmodel.AuthViewModel
+import com.example.hairup.ui.viewmodel.AuthViewModelFactory
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: (Boolean) -> Unit,
     onNavigateToRegister: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val viewModel: AuthViewModel = viewModel(
+        factory = AuthViewModelFactory(sessionManager)
+    )
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(viewModel.loginState) {
+        viewModel.loginState.collect { state ->
+            when (state) {
+                is AuthViewModel.AuthState.Success -> {
+                    onLoginSuccess(state.isAdmin)
+                }
+                is AuthViewModel.AuthState.Error -> {
+                    showError = true
+                    errorMessage = state.message
+                }
+                else -> {}
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -62,7 +91,6 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo Principal con borde dorado
             Box(
                 modifier = Modifier
                     .size(200.dp)
@@ -86,12 +114,10 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Línea decorativa superior
             DecorativeLine()
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Subtítulo
             Text(
                 text = "Tu app para reservas en peluquerías",
                 fontSize = 16.sp,
@@ -102,7 +128,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Línea decorativa inferior
             DecorativeLine()
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -116,40 +141,62 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Campo de email
             AppTextInput(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    showError = false
+                },
                 label = "Correo electrónico"
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Campo de contraseña
             AppTextInput(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    showError = false
+                },
                 label = "Contraseña",
                 visualTransformation = PasswordVisualTransformation()
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Botón de inicio de sesión
-            AppButton(
-                text = "INICIAR SESIÓN",
-                onClick = {
-                    if (email.contains("admin")) {
-                        onLoginSuccess(true)
-                    } else {
-                        onLoginSuccess(false)
-                    }
+            if (showError) {
+                Text(
+                    text = errorMessage,
+                    color = Color(0xFFFF6B6B), // Red
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(if (showError) 16.dp else 40.dp))
+
+            when (val state = viewModel.loginState.value) {
+                is AuthViewModel.AuthState.Loading -> {
+                    AppButton(
+                        text = "INICIANDO SESIÓN...",
+                        onClick = {},
+                        enabled = false
+                    )
                 }
-            )
+                else -> {
+                    AppButton(
+                        text = "INICIAR SESIÓN",
+                        onClick = {
+                            viewModel.login(email, password)
+                        },
+                        enabled = email.isNotBlank() && password.isNotBlank()
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Texto de registro
             TextButton(onClick = onNavigateToRegister) {
                 Text(
                     text = "¿No tienes cuenta? ",

@@ -251,9 +251,9 @@ fun ShopScreen() {
                 .padding(horizontal = 16.dp),
             shape = RoundedCornerShape(14.dp),
             singleLine = true,
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                focusedBorderColor = Gold,
-                unfocusedBorderColor = LeatherBrown.copy(alpha = 0.4f),
+            colors = TextFieldDefaults.colors(
+                focusedIndicatorColor = Gold,
+                unfocusedIndicatorColor = LeatherBrown.copy(alpha = 0.4f),
                 cursorColor = Gold,
                 focusedTextColor = White,
                 unfocusedTextColor = White

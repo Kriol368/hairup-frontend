@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 
@@ -32,14 +33,16 @@ fun AppTextInput(
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
         singleLine = singleLine,
-        colors = TextFieldDefaults.outlinedTextFieldColors(
-            focusedBorderColor = androidx.compose.ui.graphics.Color(0xFFD4AF37), // Gold
-            unfocusedBorderColor = androidx.compose.ui.graphics.Color(0xFF8B5E3C), // LeatherBrown
-            focusedLabelColor = androidx.compose.ui.graphics.Color(0xFFD4AF37), // Gold
-            unfocusedLabelColor = androidx.compose.ui.graphics.Color(0xFFB0B0B0), // TextGray
-            cursorColor = androidx.compose.ui.graphics.Color(0xFFD4AF37), // Gold
-            focusedTextColor = androidx.compose.ui.graphics.Color(0xFFD4AF37), // Gold - texto al escribir
-            unfocusedTextColor = androidx.compose.ui.graphics.Color(0xFFD4AF37) // Gold - texto sin foco
+        colors = TextFieldDefaults.colors(
+            focusedTextColor = Color(0xFFD4AF37),
+            unfocusedTextColor = Color(0xFFD4AF37),
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            focusedIndicatorColor = Color(0xFFD4AF37),
+            unfocusedIndicatorColor = Color(0xFF8B5E3C),
+            focusedLabelColor = Color(0xFFD4AF37),
+            unfocusedLabelColor = Color(0xFFB0B0B0),
+            cursorColor = Color(0xFFD4AF37)
         )
     )
 }
