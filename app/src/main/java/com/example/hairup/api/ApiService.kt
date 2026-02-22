@@ -82,4 +82,13 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: RedeemRequest
     ): Call<RedeemResponse>
+
+    @GET("api/categories")
+    fun getCategories(@Header("Authorization") token: String): Call<CategoriesResponse>
+
+    @POST("api/products/purchase")
+    fun purchaseProducts(
+        @Header("Authorization") token: String,
+        @Body request: PurchaseRequest
+    ): Call<PurchaseResponse>
 }

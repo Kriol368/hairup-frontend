@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -46,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
@@ -90,32 +92,7 @@ private val GoldDark = Color(0xFFA68829)
 private val LeatherBrown = Color(0xFF8B5E3C)
 private val TextGray = Color(0xFFB0B0B0)
 private val White = Color(0xFFFFFFFF)
-
-// Categorías (esto se podría obtener del backend también)
-private val categories = listOf("Todos", "Champús", "Acondicionadores", "Tratamientos", "Styling", "Accesorios")
-
-// Helper para categorizar productos (temporal - idealmente el backend enviaría categoryId)
-private fun getProductCategory(product: Product): String {
-    // Esta es una lógica temporal basada en el nombre del producto
-    // En el futuro, el backend debería enviar la categoría
-    return when {
-        product.name.contains("Champú", ignoreCase = true) -> "Champús"
-        product.name.contains("Acondicionador", ignoreCase = true) -> "Acondicionadores"
-        product.name.contains("Mascarilla", ignoreCase = true) ||
-                product.name.contains("Aceite", ignoreCase = true) ||
-                product.name.contains("Sérum", ignoreCase = true) -> "Tratamientos"
-        product.name.contains("Spray", ignoreCase = true) ||
-                product.name.contains("Cera", ignoreCase = true) -> "Styling"
-        product.name.contains("Cepillo", ignoreCase = true) -> "Accesorios"
-        else -> "Otros"
-    }
-}
-
-// Wrapper para producto con categoría
-private data class ShopProduct(
-    val product: Product,
-    val category: String
-)
+private val GreenSuccess = Color(0xFF4CAF50)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,165 +104,132 @@ fun ShopScreen() {
     )
 
     val shopState by viewModel.shopState.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     val cartItems by viewModel.cartItems.collectAsState()
+    val purchaseResult by viewModel.purchaseResult.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("Todos") }
+    var selectedCategoryId by remember { mutableStateOf(-1) } // -1 = "Todos"
     var showCart by remember { mutableStateOf(false) }
-    var showOrderSuccess by remember { mutableStateOf(false) }
-    var lastOrderXp by remember { mutableStateOf(0) }
+    var showPurchaseDialog by remember { mutableStateOf(false) }
 
-    // Cargar productos al iniciar
+    // Cargar productos y categorías al iniciar
     LaunchedEffect(Unit) {
         viewModel.loadProducts()
+        viewModel.loadCategories()
     }
 
-    // Procesar productos según estado
-    when (val state = shopState) {
-        is ShopViewModel.ShopState.Loading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Gold)
-            }
+    // Mostrar resultado de compra
+    LaunchedEffect(purchaseResult) {
+        if (purchaseResult != null) {
+            showPurchaseDialog = true
         }
+    }
 
-        is ShopViewModel.ShopState.Error -> {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Error al cargar productos",
-                    color = TextGray,
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = state.message,
-                    color = Color(0xFFE53935),
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { viewModel.loadProducts() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Gold,
-                        contentColor = CarbonBlack
-                    )
-                ) {
-                    Text("Reintentar")
-                }
-            }
-        }
-
+    // Filtrar productos por categoría y búsqueda
+    val filteredProducts = when (val state = shopState) {
         is ShopViewModel.ShopState.Success -> {
-            val allProducts = state.products
-            val shopProducts = allProducts.map {
-                ShopProduct(product = it, category = getProductCategory(it))
-            }
-
-            // Filtrar productos
-            val filteredProducts = shopProducts.filter { sp ->
-                val matchesCategory = selectedCategory == "Todos" || sp.category == selectedCategory
+            state.products.filter { product ->
+                val matchesCategory = selectedCategoryId == -1 || product.categoryId == selectedCategoryId
                 val matchesSearch = searchQuery.isBlank() ||
-                        sp.product.name.contains(searchQuery, ignoreCase = true) ||
-                        sp.product.description.contains(searchQuery, ignoreCase = true)
+                        product.name.contains(searchQuery, ignoreCase = true) ||
+                        product.description.contains(searchQuery, ignoreCase = true)
                 matchesCategory && matchesSearch
             }
+        }
+        else -> emptyList()
+    }
 
-            // Contador del carrito
-            val totalCartItems = cartItems.sumOf { it.quantity }
+    val totalCartItems = cartItems.sumOf { it.quantity }
 
-            // Función para obtener cantidad en carrito
-            fun getCartQuantity(productId: Int): Int {
-                return cartItems.find { it.product.id == productId }?.quantity ?: 0
-            }
+    fun getCartQuantity(productId: Int): Int {
+        return cartItems.find { it.product.id == productId }?.quantity ?: 0
+    }
 
-            // Contenido principal
-            Column(
+    Scaffold(
+        containerColor = CarbonBlack
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(CarbonBlack)
+        ) {
+            // Top Bar
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(CarbonBlack)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Top Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Tienda",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Gold
-                    )
-
-                    IconButton(onClick = { showCart = true }) {
-                        BadgedBox(
-                            badge = {
-                                if (totalCartItems > 0) {
-                                    Badge(
-                                        containerColor = Gold,
-                                        contentColor = CarbonBlack
-                                    ) {
-                                        Text(
-                                            text = "$totalCartItems",
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ShoppingCart,
-                                contentDescription = "Carrito",
-                                tint = Gold,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Search Bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Buscar productos...", color = TextGray.copy(alpha = 0.6f)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            tint = TextGray
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedIndicatorColor = Gold,
-                        unfocusedIndicatorColor = LeatherBrown.copy(alpha = 0.4f),
-                        cursorColor = Gold,
-                        focusedTextColor = White,
-                        unfocusedTextColor = White,
-                        focusedContainerColor = DarkGray,
-                        unfocusedContainerColor = DarkGray
-                    )
+                Text(
+                    text = "Tienda",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Gold
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                IconButton(onClick = { showCart = true }) {
+                    BadgedBox(
+                        badge = {
+                            if (totalCartItems > 0) {
+                                Badge(
+                                    containerColor = Gold,
+                                    contentColor = CarbonBlack
+                                ) {
+                                    Text(
+                                        text = "$totalCartItems",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ShoppingCart,
+                            contentDescription = "Carrito",
+                            tint = Gold,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
+            }
 
-                // Category Filters
+            // Search Bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Buscar productos...", color = TextGray.copy(alpha = 0.6f)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = TextGray
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(14.dp),
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedIndicatorColor = Gold,
+                    unfocusedIndicatorColor = LeatherBrown.copy(alpha = 0.4f),
+                    cursorColor = Gold,
+                    focusedTextColor = White,
+                    unfocusedTextColor = White,
+                    focusedContainerColor = DarkGray,
+                    unfocusedContainerColor = DarkGray
+                )
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Category Filters (reales desde backend)
+            if (categories.isNotEmpty()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -294,18 +238,18 @@ fun ShopScreen() {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     categories.forEach { category ->
-                        val isSelected = selectedCategory == category
+                        val isSelected = selectedCategoryId == category.id
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(
                                     if (isSelected) Gold else DarkGray
                                 )
-                                .clickable { selectedCategory = category }
+                                .clickable { selectedCategoryId = category.id }
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = category,
+                                text = category.name,
                                 fontSize = 13.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isSelected) CarbonBlack else TextGray
@@ -313,12 +257,21 @@ fun ShopScreen() {
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-                // Product Grid
-                if (filteredProducts.isEmpty()) {
-                    // Empty state
+            // Product Grid
+            when (val state = shopState) {
+                is ShopViewModel.ShopState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Gold)
+                    }
+                }
+                is ShopViewModel.ShopState.Error -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -326,34 +279,69 @@ fun ShopScreen() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            tint = TextGray.copy(alpha = 0.4f),
-                            modifier = Modifier.size(64.dp)
+                        Text(
+                            text = "Error al cargar productos",
+                            color = TextGray,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = state.message,
+                            color = Color(0xFFE53935),
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No se encontraron productos",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = TextGray
-                        )
-                    }
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(filteredProducts, key = { it.product.id }) { shopProduct ->
-                            ProductCard(
-                                product = shopProduct.product,
-                                cartQuantity = getCartQuantity(shopProduct.product.id),
-                                onAdd = { viewModel.addToCart(shopProduct.product) },
-                                onRemove = { viewModel.removeFromCart(shopProduct.product.id) }
+                        Button(
+                            onClick = { viewModel.loadProducts() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Gold,
+                                contentColor = CarbonBlack
                             )
+                        ) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+                is ShopViewModel.ShopState.Success -> {
+                    if (filteredProducts.isEmpty()) {
+                        // Empty state
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = TextGray.copy(alpha = 0.4f),
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "No se encontraron productos",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = TextGray
+                            )
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredProducts, key = { it.id }) { product ->
+                                ProductCard(
+                                    product = product,
+                                    cartQuantity = getCartQuantity(product.id),
+                                    onAdd = { viewModel.addToCart(product) },
+                                    onRemove = { viewModel.removeFromCart(product.id) }
+                                )
+                            }
                         }
                     }
                 }
@@ -381,56 +369,89 @@ fun ShopScreen() {
                 onRemove = { viewModel.removeFromCart(it.id) },
                 onDelete = { viewModel.deleteFromCart(it.id) },
                 onOrder = {
-                    // Calcular XP (2 puntos por euro como ejemplo)
-                    val xp = cartItems.sumOf { (it.product.price * 2).toInt() * it.quantity }
-                    lastOrderXp = xp
-                    // Aquí iría la llamada al backend para procesar el pedido
-                    viewModel.clearCart()
-                    showCart = false
-                    showOrderSuccess = true
-                }
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        showCart = false
+                        viewModel.purchase()
+                    }
+                },
+                isLoading = isLoading
             )
         }
     }
 
-    // Order success dialog
-    if (showOrderSuccess) {
+    // Purchase result dialog
+    if (showPurchaseDialog && purchaseResult != null) {
         AlertDialog(
-            onDismissRequest = { showOrderSuccess = false },
+            onDismissRequest = {
+                showPurchaseDialog = false
+                viewModel.resetPurchaseResult()
+            },
             containerColor = DarkGray,
             titleContentColor = White,
+            icon = {
+                if (purchaseResult!!.success) {
+                    Icon(
+                        Icons.Default.Star,
+                        null,
+                        tint = Gold,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+            },
             title = {
                 Text(
-                    text = "Pedido realizado",
-                    fontWeight = FontWeight.Bold
+                    text = if (purchaseResult!!.success) "¡Compra realizada!" else "Error",
+                    fontWeight = FontWeight.Bold,
+                    color = if (purchaseResult!!.success) Gold else Color(0xFFE53935)
                 )
             },
             text = {
                 Column {
                     Text(
-                        text = "Tu pedido ha sido procesado correctamente.",
+                        text = purchaseResult!!.message,
                         color = TextGray
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = Gold,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                    if (purchaseResult!!.success) {
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Has ganado $lastOrderXp XP",
+                            text = "Has ganado:",
                             fontWeight = FontWeight.Bold,
-                            color = Gold
+                            color = White
                         )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Gold,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${purchaseResult!!.xpEarned} XP",
+                                color = Gold
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = GoldLight,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${purchaseResult!!.pointsEarned} puntos",
+                                color = GoldLight
+                            )
+                        }
                     }
                 }
             },
             confirmButton = {
                 Button(
-                    onClick = { showOrderSuccess = false },
+                    onClick = {
+                        showPurchaseDialog = false
+                        viewModel.resetPurchaseResult()
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Gold,
                         contentColor = CarbonBlack
@@ -467,7 +488,6 @@ private fun ProductCard(
                     .background(DarkGray),
                 contentAlignment = Alignment.Center
             ) {
-                // Usar AsyncImage para cargar desde URL o fallback a recurso local
                 if (product.image.isNotEmpty() && !product.image.startsWith("product_")) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
@@ -482,19 +502,7 @@ private fun ProductCard(
                         alpha = if (isAvailable) 1f else 0.4f
                     )
                 } else {
-                    // Fallback a imagen local
-                    val imageRes = when {
-                        product.name.contains("Champú", ignoreCase = true) -> R.drawable.product_champu_reparador
-                        product.name.contains("Acondicionador", ignoreCase = true) -> R.drawable.product_acondicionador
-                        product.name.contains("Mascarilla", ignoreCase = true) -> R.drawable.product_mascarilla
-                        product.name.contains("Aceite", ignoreCase = true) -> R.drawable.product_aceite_argan
-                        product.name.contains("Sérum", ignoreCase = true) -> R.drawable.product_serum
-                        product.name.contains("Spray", ignoreCase = true) -> R.drawable.product_spray
-                        product.name.contains("Cera", ignoreCase = true) -> R.drawable.product_cera
-                        product.name.contains("Cepillo", ignoreCase = true) -> R.drawable.product_cepillo
-                        else -> R.drawable.product_champu_reparador
-                    }
-
+                    val imageRes = R.drawable.product_champu_reparador // Default
                     Image(
                         painter = painterResource(id = imageRes),
                         contentDescription = product.name,
@@ -506,7 +514,6 @@ private fun ProductCard(
                     )
                 }
 
-                // Sold out overlay
                 if (!isAvailable) {
                     Box(
                         modifier = Modifier
@@ -525,7 +532,6 @@ private fun ProductCard(
             }
 
             Column(modifier = Modifier.padding(10.dp)) {
-                // Name
                 Text(
                     text = product.name,
                     style = MaterialTheme.typography.titleSmall,
@@ -537,7 +543,6 @@ private fun ProductCard(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // Description
                 Text(
                     text = product.description,
                     style = MaterialTheme.typography.bodySmall,
@@ -549,7 +554,6 @@ private fun ProductCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Price + Cart controls
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -564,7 +568,6 @@ private fun ProductCard(
                     )
 
                     if (cartQuantity > 0 && isAvailable) {
-                        // Quantity controls
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -608,24 +611,19 @@ private fun ProductCard(
                                 )
                             }
                         }
-                    } else {
-                        // Add button
+                    } else if (isAvailable) {
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    if (isAvailable) Gold else LeatherBrown.copy(alpha = 0.3f)
-                                )
-                                .then(
-                                    if (isAvailable) Modifier.clickable { onAdd() } else Modifier
-                                ),
+                                .background(Gold)
+                                .clickable { onAdd() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "Añadir al carrito",
-                                tint = if (isAvailable) CarbonBlack else TextGray.copy(alpha = 0.5f),
+                                tint = CarbonBlack,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -643,10 +641,10 @@ private fun CartContent(
     onAdd: (Product) -> Unit,
     onRemove: (Product) -> Unit,
     onDelete: (Product) -> Unit,
-    onOrder: () -> Unit
+    onOrder: () -> Unit,
+    isLoading: Boolean
 ) {
     val total = cartItems.sumOf { it.product.price * it.quantity }
-    val totalXp = cartItems.sumOf { (it.product.price * 2).toInt() * it.quantity }
 
     Column(
         modifier = Modifier
@@ -739,24 +737,6 @@ private fun CartContent(
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // XP to earn
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = null,
-                    tint = Gold.copy(alpha = 0.7f),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Ganarás $totalXp XP con esta compra",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = GoldLight.copy(alpha = 0.8f)
-                )
-            }
-
             Spacer(modifier = Modifier.height(20.dp))
 
             // Order button
@@ -765,23 +745,35 @@ private fun CartContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
+                enabled = !isLoading,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Gold,
-                    contentColor = CarbonBlack
+                    contentColor = CarbonBlack,
+                    disabledContainerColor = LeatherBrown.copy(alpha = 0.3f),
+                    disabledContentColor = TextGray.copy(alpha = 0.5f)
                 ),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.ShoppingBag,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Realizar Pedido",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = CarbonBlack,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("PROCESANDO...")
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingBag,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Realizar Pedido",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
             }
         }
     }
@@ -806,7 +798,6 @@ private fun CartItemRow(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Product info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.product.name,

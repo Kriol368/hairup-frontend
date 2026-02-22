@@ -39,3 +39,12 @@ data class UpdateAppointmentRequest(
 data class RedeemRequest(
     val rewardId: Int
 )
+
+data class PurchaseItem(
+    val productId: Int,
+    val quantity: Int
+)
+
+data class PurchaseRequest(
+    val items: List<PurchaseItem>
+)

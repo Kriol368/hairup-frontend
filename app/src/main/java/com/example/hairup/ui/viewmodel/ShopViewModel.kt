@@ -3,7 +3,9 @@ package com.example.hairup.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hairup.api.models.ProductResponse
+import com.example.hairup.api.models.CategoryResponse
+import com.example.hairup.api.models.PurchaseItem
+import com.example.hairup.api.models.PurchaseResponse
 import com.example.hairup.data.SessionManager
 import com.example.hairup.data.repository.ShopRepository
 import com.example.hairup.model.Product
@@ -19,14 +21,37 @@ class ShopViewModel(
     private val _shopState = MutableStateFlow<ShopState>(ShopState.Loading)
     val shopState: StateFlow<ShopState> = _shopState
 
+    private val _categories = MutableStateFlow<List<CategoryItem>>(emptyList())
+    val categories: StateFlow<List<CategoryItem>> = _categories
+
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
 
+    private val _purchaseResult = MutableStateFlow<PurchaseResult?>(null)
+    val purchaseResult: StateFlow<PurchaseResult?> = _purchaseResult
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
     private val TAG = "ShopViewModel"
+
+    data class CategoryItem(
+        val id: Int,
+        val name: String
+    )
 
     data class CartItem(
         val product: Product,
         var quantity: Int
+    )
+
+    data class PurchaseResult(
+        val success: Boolean,
+        val message: String,
+        val xpEarned: Int,
+        val pointsEarned: Int,
+        val newXp: Int,
+        val newPoints: Int
     )
 
     sealed class ShopState {
@@ -43,23 +68,125 @@ class ShopViewModel(
         }
 
         _shopState.value = ShopState.Loading
-        Log.d(TAG, "Cargando productos...")
 
         repository.getProducts(token) { result ->
             viewModelScope.launch {
                 result.fold(
                     onSuccess = { productResponses ->
                         val products = productResponses.map { it.toProduct() }
-                        Log.d(TAG, "Productos cargados: ${products.size}")
                         _shopState.value = ShopState.Success(products)
                     },
                     onFailure = { exception ->
-                        Log.e(TAG, "Error cargando productos", exception)
                         _shopState.value = ShopState.Error(exception.message ?: "Error desconocido")
                     }
                 )
             }
         }
+    }
+
+    fun loadCategories() {
+        val token = sessionManager.getToken()
+        if (token.isNullOrEmpty()) {
+            return
+        }
+
+        repository.getCategories(token) { result ->
+            viewModelScope.launch {
+                result.fold(
+                    onSuccess = { categoryResponses ->
+                        val categories = categoryResponses.map {
+                            CategoryItem(id = it.id, name = it.name)
+                        }
+                        // Añadir "Todos" al principio
+                        _categories.value = listOf(CategoryItem(id = -1, name = "Todos")) + categories
+                    },
+                    onFailure = { exception ->
+                        Log.e(TAG, "Error cargando categorías", exception)
+                        // Si falla, al menos tenemos "Todos"
+                        _categories.value = listOf(CategoryItem(id = -1, name = "Todos"))
+                    }
+                )
+            }
+        }
+    }
+
+    fun purchase() {
+        val token = sessionManager.getToken()
+        if (token.isNullOrEmpty()) {
+            _purchaseResult.value = PurchaseResult(
+                success = false,
+                message = "No hay sesión activa",
+                xpEarned = 0,
+                pointsEarned = 0,
+                newXp = 0,
+                newPoints = 0
+            )
+            return
+        }
+
+        if (_cartItems.value.isEmpty()) {
+            _purchaseResult.value = PurchaseResult(
+                success = false,
+                message = "El carrito está vacío",
+                xpEarned = 0,
+                pointsEarned = 0,
+                newXp = 0,
+                newPoints = 0
+            )
+            return
+        }
+
+        _isLoading.value = true
+        _purchaseResult.value = null
+
+        val purchaseItems = _cartItems.value.map {
+            PurchaseItem(productId = it.product.id, quantity = it.quantity)
+        }
+
+        repository.purchaseProducts(token, purchaseItems) { result ->
+            viewModelScope.launch {
+                result.fold(
+                    onSuccess = { response ->
+                        // Actualizar usuario en SessionManager
+                        sessionManager.getUser()?.let { user ->
+                            val updatedUser = user.copy(
+                                xp = response.newXp,
+                                points = response.newPoints
+                            )
+                            sessionManager.saveAuthData(token, updatedUser)
+                        }
+
+                        _purchaseResult.value = PurchaseResult(
+                            success = true,
+                            message = response.message,
+                            xpEarned = response.xpEarned,
+                            pointsEarned = response.pointsEarned,
+                            newXp = response.newXp,
+                            newPoints = response.newPoints
+                        )
+
+                        // Vaciar carrito
+                        _cartItems.value = emptyList()
+                        _isLoading.value = false
+                    },
+                    onFailure = { exception ->
+                        _purchaseResult.value = PurchaseResult(
+                            success = false,
+                            message = exception.message ?: "Error al procesar compra",
+                            xpEarned = 0,
+                            pointsEarned = 0,
+                            newXp = 0,
+                            newPoints = 0
+                        )
+                        _isLoading.value = false
+                    }
+                )
+            }
+        }
+    }
+
+    fun resetPurchaseResult() {
+        _purchaseResult.value = null
     }
 
     // Funciones del carrito
@@ -75,7 +202,6 @@ class ShopViewModel(
         }
 
         _cartItems.value = currentCart
-        Log.d(TAG, "Producto añadido al carrito. Total items: ${currentCart.size}")
     }
 
     fun removeFromCart(productId: Int) {

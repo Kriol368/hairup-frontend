@@ -2,9 +2,7 @@ package com.example.hairup.data.repository
 
 import android.util.Log
 import com.example.hairup.api.RetrofitClient
-import com.example.hairup.api.models.ProductResponse
-import com.example.hairup.api.models.ProductsResponse
-import com.example.hairup.model.Product
+import com.example.hairup.api.models.*
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -23,21 +21,63 @@ class ShopRepository {
             ) {
                 if (response.isSuccessful) {
                     val products = response.body()?.data ?: emptyList()
-                    Log.d(TAG, "Productos obtenidos: ${products.size}")
                     callback(Result.success(products))
                 } else {
-                    val errorMsg = when (response.code()) {
-                        401 -> "Sesión expirada"
-                        403 -> "No autorizado"
-                        else -> "Error ${response.code()}"
-                    }
-                    Log.e(TAG, "Error obteniendo productos: $errorMsg")
-                    callback(Result.failure(Exception(errorMsg)))
+                    callback(Result.failure(Exception("Error ${response.code()}")))
                 }
             }
 
             override fun onFailure(call: Call<ProductsResponse>, t: Throwable) {
-                Log.e(TAG, "Error de red en getProducts", t)
+                callback(Result.failure(t))
+            }
+        })
+    }
+
+    fun getCategories(token: String, callback: (Result<List<CategoryResponse>>) -> Unit) {
+        Log.d(TAG, "Obteniendo categorías")
+
+        RetrofitClient.apiService.getCategories("Bearer $token").enqueue(object : Callback<CategoriesResponse> {
+            override fun onResponse(
+                call: Call<CategoriesResponse>,
+                response: Response<CategoriesResponse>
+            ) {
+                if (response.isSuccessful) {
+                    val categories = response.body()?.data ?: emptyList()
+                    callback(Result.success(categories))
+                } else {
+                    callback(Result.failure(Exception("Error ${response.code()}")))
+                }
+            }
+
+            override fun onFailure(call: Call<CategoriesResponse>, t: Throwable) {
+                callback(Result.failure(t))
+            }
+        })
+    }
+
+    fun purchaseProducts(
+        token: String,
+        items: List<PurchaseItem>,
+        callback: (Result<PurchaseResponse>) -> Unit
+    ) {
+        Log.d(TAG, "Realizando compra de ${items.size} productos")
+
+        val request = PurchaseRequest(items)
+
+        RetrofitClient.apiService.purchaseProducts("Bearer $token", request).enqueue(object : Callback<PurchaseResponse> {
+            override fun onResponse(
+                call: Call<PurchaseResponse>,
+                response: Response<PurchaseResponse>
+            ) {
+                if (response.isSuccessful) {
+                    response.body()?.let { callback(Result.success(it)) }
+                        ?: callback(Result.failure(Exception("Respuesta vacía")))
+                } else {
+                    callback(Result.failure(Exception("Error ${response.code()}")))
+                }
+            }
+
+            override fun onFailure(call: Call<PurchaseResponse>, t: Throwable) {
                 callback(Result.failure(t))
             }
         })

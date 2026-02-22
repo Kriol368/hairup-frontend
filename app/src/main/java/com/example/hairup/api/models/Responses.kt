@@ -1,6 +1,7 @@
 package com.example.hairup.api.models
 
 import com.example.hairup.model.Level
+import com.example.hairup.model.Product
 import com.example.hairup.model.User
 import com.google.gson.annotations.SerializedName
 
@@ -71,21 +72,22 @@ data class LevelsResponse(
 data class ProductResponse(
     val id: Int,
     val name: String,
-    val description: String,
+    val description: String?,
     val price: Double,
-    val image: String,
+    val image: String?,
     val available: Boolean,
     val points: Int,
-    @SerializedName("categoryId") val categoryId: Int
+    @SerializedName("categoryId") val categoryId: Int?  // ← IMPORTANTE: puede ser null
 ) {
-    fun toProduct(): com.example.hairup.model.Product {
-        return com.example.hairup.model.Product(
+    fun toProduct(): Product {
+        return Product(
             id = id,
             name = name,
-            description = description,
+            description = description ?: "",
             price = price,
-            image = image,
-            available = available
+            image = image ?: "",
+            available = available,
+            categoryId = categoryId ?: 0
         )
     }
 }
@@ -165,4 +167,22 @@ data class RedeemResponse(
     val success: Boolean,
     val message: String,
     val newPoints: Int?
+)
+
+data class CategoryResponse(
+    val id: Int,
+    val name: String
+)
+
+data class CategoriesResponse(
+    val data: List<CategoryResponse>
+)
+
+data class PurchaseResponse(
+    val success: Boolean,
+    val message: String,
+    val xpEarned: Int,
+    val pointsEarned: Int,
+    val newXp: Int,
+    val newPoints: Int
 )
