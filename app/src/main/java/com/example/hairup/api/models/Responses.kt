@@ -32,15 +32,29 @@ data class UserResponse(
 }
 
 data class AppointmentResponse(
-    val id: Int? = null,
-    val serviceName: String? = null,
-    val serviceId: Int? = null,
-    val date: String? = null,
-    val time: String? = null,
-    val stylistName: String? = null,
-    val stylistId: Int? = null,
-    val status: Int? = null
-)
+    val id: Int,
+    val serviceName: String,
+    val serviceId: Int,
+    val date: String,
+    val time: String,
+    val stylistName: String,
+    val stylistId: Int,
+    val status: Int,
+    val price: Double,
+    val duration: Int,
+    val xpEarned: Int
+) {
+    fun toBooking(): com.example.hairup.model.Booking {
+        return com.example.hairup.model.Booking(
+            id = id,
+            serviceId = serviceId,
+            date = date,
+            time = time,
+            userId = 0,
+            status = status
+        )
+    }
+}
 data class LevelResponse(
     val id: Int,
     val name: String,
@@ -76,4 +90,7 @@ data class ProductResponse(
 
 data class ProductsResponse(
     val data: List<ProductResponse>
+)
+data class AppointmentsResponse(
+    val data: List<AppointmentResponse>
 )

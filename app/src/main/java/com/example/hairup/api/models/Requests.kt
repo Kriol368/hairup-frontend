@@ -22,3 +22,16 @@ data class ChangePasswordRequest(
     val currentPassword: String,
     val newPassword: String
 )
+
+data class CreateAppointmentRequest(
+    val serviceId: Int,
+    val date: String,
+    val time: String,
+    val barberId: Int
+)
+
+data class UpdateAppointmentRequest(
+    val date: String? = null,
+    val time: String? = null,
+    val status: Int? = null
+)

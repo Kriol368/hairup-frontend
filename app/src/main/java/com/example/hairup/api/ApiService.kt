@@ -35,4 +35,29 @@ interface ApiService {
 
     @GET("api/products")
     fun getProducts(@Header("Authorization") token: String): Call<ProductsResponse>
+
+    @GET("api/appointments/past")
+    fun getPastAppointments(@Header("Authorization") token: String): Call<List<AppointmentResponse>>
+
+    @GET("api/appointments")
+    fun getUserAppointments(@Header("Authorization") token: String): Call<AppointmentsResponse>
+
+    @POST("api/appointments")
+    fun createAppointment(
+        @Header("Authorization") token: String,
+        @Body request: CreateAppointmentRequest
+    ): Call<AppointmentResponse>
+
+    @PUT("api/appointments/{id}")
+    fun updateAppointment(
+        @Header("Authorization") token: String,
+        @Path("id") appointmentId: Int,
+        @Body request: UpdateAppointmentRequest
+    ): Call<AppointmentResponse>
+
+    @DELETE("api/appointments/{id}")
+    fun deleteAppointment(
+        @Header("Authorization") token: String,
+        @Path("id") appointmentId: Int
+    ): Call<Map<String, String>>
 }
