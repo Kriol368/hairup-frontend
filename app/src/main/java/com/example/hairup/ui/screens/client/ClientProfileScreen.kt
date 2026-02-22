@@ -306,7 +306,7 @@ fun ProfileScreen(
                         )
                         StatItem(
                             icon = Icons.Default.Loyalty,
-                            value = "${user.xp / 2}",
+                            value = "${user.points}",
                             label = "Pts"
                         )
                     }

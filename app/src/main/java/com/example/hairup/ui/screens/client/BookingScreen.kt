@@ -48,6 +48,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,6 +59,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,13 +71,17 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.hairup.data.SessionManager
 import com.example.hairup.model.Service
+import com.example.hairup.ui.viewmodel.BookingViewModel
+import com.example.hairup.ui.viewmodel.BookingViewModelFactory
 import java.util.Calendar
 
 // ══════════════════════════════════════════════════════════════════
@@ -94,42 +101,14 @@ private val GreenSuccess = Color(0xFF4CAF50)
 // ══════════════════════════════════════════════════════════════════
 // Local Data Classes
 // ══════════════════════════════════════════════════════════════════
-private data class Stylist(
-    val name: String,
-    val specialty: String,
-    val initial: String
-)
-
 private data class BookingState(
     val selectedService: Service? = null,
-    val selectedStylist: Stylist? = null,
+    val selectedBarber: BookingViewModel.BarberItem? = null,
     val selectedYear: Int = 0,
     val selectedMonth: Int = 0,
     val selectedDay: Int = 0,
     val selectedTime: String? = null
 )
-
-// ══════════════════════════════════════════════════════════════════
-// Mock Data
-// ══════════════════════════════════════════════════════════════════
-private val mockServices = listOf(
-    Service(1, "Corte de pelo", "Corte clasico o moderno", 15.0, 30, 25),
-    Service(2, "Corte y Barba", "Corte + arreglo de barba", 22.0, 45, 40),
-    Service(3, "Tinte", "Color completo o mechas", 35.0, 60, 50),
-    Service(4, "Tratamiento capilar", "Hidratacion y reparacion", 25.0, 45, 35),
-    Service(5, "Corte y Color", "Servicio completo", 45.0, 90, 70),
-    Service(6, "Alisado", "Alisado profesional", 40.0, 75, 55)
-)
-
-private val mockStylists = listOf(
-    Stylist("Sin preferencia", "Cualquier profesional disponible", "?"),
-    Stylist("Ana Garcia", "Colorista experta", "A"),
-    Stylist("Carlos Lopez", "Especialista en corte masculino", "C"),
-    Stylist("Laura Martin", "Tratamientos y alisados", "L"),
-    Stylist("Diego Ruiz", "Barberia clasica", "D")
-)
-
-private val unavailableTimes = setOf("10:00", "11:30", "13:00", "16:00", "17:30")
 
 private val stepLabels = listOf("Servicio", "Peluquero", "Fecha", "Confirmar")
 
@@ -186,10 +165,10 @@ private fun getDayOfWeekName(year: Int, month: Int, day: Int): String {
     return when (cal.get(Calendar.DAY_OF_WEEK)) {
         Calendar.MONDAY -> "Lunes"
         Calendar.TUESDAY -> "Martes"
-        Calendar.WEDNESDAY -> "Miercoles"
+        Calendar.WEDNESDAY -> "Miércoles"
         Calendar.THURSDAY -> "Jueves"
         Calendar.FRIDAY -> "Viernes"
-        Calendar.SATURDAY -> "Sabado"
+        Calendar.SATURDAY -> "Sábado"
         else -> "Domingo"
     }
 }
@@ -198,15 +177,6 @@ private fun formatDateLong(year: Int, month: Int, day: Int): String {
     val dow = getDayOfWeekName(year, month, day)
     val mn = monthNames[month]
     return "$dow $day de $mn, $year"
-}
-
-private fun generateTimeSlots(): List<String> {
-    val slots = mutableListOf<String>()
-    for (hour in 9..19) {
-        slots.add(String.format("%02d:00", hour))
-        if (hour < 20) slots.add(String.format("%02d:30", hour))
-    }
-    return slots.filter { it <= "19:30" }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -218,16 +188,57 @@ fun BookingScreen(
     onBookingComplete: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val viewModel: BookingViewModel = viewModel(
+        factory = BookingViewModelFactory(sessionManager)
+    )
+
+    val services by viewModel.services.collectAsState()
+    val barbers by viewModel.barbers.collectAsState()
+    val availableSlots by viewModel.availableSlots.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val bookingSuccess by viewModel.bookingSuccess.collectAsState()
+
     var currentStep by remember { mutableStateOf(1) }
     var previousStep by remember { mutableStateOf(1) }
     var bookingState by remember { mutableStateOf(BookingState()) }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
+    // Cargar disponibilidad cuando se selecciona barbero y fecha
+    LaunchedEffect(bookingState.selectedBarber, bookingState.selectedYear, bookingState.selectedMonth, bookingState.selectedDay) {
+        val barber = bookingState.selectedBarber
+        if (barber != null && bookingState.selectedDay > 0) {
+            val dateStr = viewModel.formatDateForApi(
+                bookingState.selectedYear,
+                bookingState.selectedMonth,
+                bookingState.selectedDay
+            )
+            viewModel.loadAvailability(barber.id, dateStr)
+        }
+    }
+
+    // Mostrar diálogo de éxito cuando se crea la cita
+    LaunchedEffect(bookingSuccess) {
+        if (bookingSuccess != null) {
+            showSuccessDialog = true
+        }
+    }
+
+    // Limpiar errores
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            kotlinx.coroutines.delay(3000)
+            viewModel.clearError()
+        }
+    }
+
     val canProceed = when (currentStep) {
         1 -> bookingState.selectedService != null
-        2 -> bookingState.selectedStylist != null
+        2 -> bookingState.selectedBarber != null
         3 -> bookingState.selectedDay > 0 && bookingState.selectedTime != null
-        4 -> true
+        4 -> false  // En paso 4, deshabilitamos el botón inferior
         else -> false
     }
 
@@ -235,6 +246,7 @@ fun BookingScreen(
         SuccessDialog(
             onDismiss = {
                 showSuccessDialog = false
+                viewModel.resetBookingSuccess()
                 onBookingComplete()
             }
         )
@@ -272,6 +284,22 @@ fun BookingScreen(
             // Step indicator
             StepIndicatorRow(currentStep = currentStep)
 
+            // Error message
+            if (errorMessage != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = errorMessage!!,
+                        color = Color(0xFFE53935),
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
             // Content
             Box(modifier = Modifier.weight(1f)) {
                 val goingForward = currentStep >= previousStep
@@ -290,15 +318,21 @@ fun BookingScreen(
                 ) { step ->
                     when (step) {
                         1 -> Step1ServiceSelection(
+                            services = services,
                             selected = bookingState.selectedService,
-                            onSelect = { bookingState = bookingState.copy(selectedService = it) }
+                            onSelect = { bookingState = bookingState.copy(selectedService = it) },
+                            isLoading = isLoading && services.isEmpty()
                         )
-                        2 -> Step2StylistSelection(
-                            selected = bookingState.selectedStylist,
-                            onSelect = { bookingState = bookingState.copy(selectedStylist = it) }
+                        2 -> Step2BarberSelection(
+                            barbers = barbers,
+                            selected = bookingState.selectedBarber,
+                            onSelect = { bookingState = bookingState.copy(selectedBarber = it) },
+                            isLoading = isLoading && barbers.isEmpty()
                         )
                         3 -> Step3DateTimeSelection(
                             state = bookingState,
+                            availableSlots = availableSlots,
+                            isLoading = isLoading,
                             onDateSelected = { y, m, d ->
                                 bookingState = bookingState.copy(
                                     selectedYear = y, selectedMonth = m, selectedDay = d,
@@ -307,59 +341,86 @@ fun BookingScreen(
                             },
                             onTimeSelected = { bookingState = bookingState.copy(selectedTime = it) }
                         )
-                        4 -> Step4Confirmation(state = bookingState)
+                        4 -> Step4Confirmation(
+                            state = bookingState,
+                            onConfirmBooking = {
+                                val service = bookingState.selectedService
+                                val barber = bookingState.selectedBarber
+                                val time = bookingState.selectedTime
+
+                                if (service != null && barber != null && time != null) {
+                                    val dateStr = viewModel.formatDateForApi(
+                                        bookingState.selectedYear,
+                                        bookingState.selectedMonth,
+                                        bookingState.selectedDay
+                                    )
+                                    viewModel.createBooking(
+                                        serviceId = service.id,
+                                        date = dateStr,
+                                        time = "$time:00",
+                                        barberId = barber.id,
+                                        callback = { success ->
+                                            if (!success) {
+                                                // Error ya se maneja en errorMessage
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        )
                     }
                 }
             }
 
-            // Bottom buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        if (currentStep > 1) {
-                            previousStep = currentStep
-                            currentStep--
-                        } else {
-                            onBack()
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold),
-                    border = BorderStroke(1.dp, Gold.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(12.dp)
+            // Bottom buttons (excepto paso 4)
+            if (currentStep < 4) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(if (currentStep == 1) "Cancelar" else "Anterior")
-                }
+                    OutlinedButton(
+                        onClick = {
+                            if (currentStep > 1) {
+                                previousStep = currentStep
+                                currentStep--
+                            } else {
+                                onBack()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Gold),
+                        border = BorderStroke(1.dp, Gold.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(if (currentStep == 1) "Cancelar" else "Anterior")
+                    }
 
-                Button(
-                    onClick = {
-                        if (currentStep < 4) {
+                    Button(
+                        onClick = {
                             previousStep = currentStep
                             currentStep++
-                        } else {
-                            showSuccessDialog = true
-                        }
-                    },
-                    enabled = canProceed,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Gold,
-                        contentColor = CarbonBlack,
-                        disabledContainerColor = LeatherBrown.copy(alpha = 0.3f),
-                        disabledContentColor = TextGray.copy(alpha = 0.5f)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = if (currentStep == 4) "Confirmar Reserva" else "Siguiente",
-                        fontWeight = FontWeight.Bold
-                    )
+                        },
+                        enabled = canProceed && !isLoading,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Gold,
+                            contentColor = CarbonBlack,
+                            disabledContainerColor = LeatherBrown.copy(alpha = 0.3f),
+                            disabledContentColor = TextGray.copy(alpha = 0.5f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "Siguiente",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
+            } else {
+                // Espaciado en paso 4
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -439,27 +500,38 @@ private fun StepIndicatorRow(currentStep: Int) {
 // ══════════════════════════════════════════════════════════════════
 @Composable
 private fun Step1ServiceSelection(
+    services: List<Service>,
     selected: Service?,
-    onSelect: (Service) -> Unit
+    onSelect: (Service) -> Unit,
+    isLoading: Boolean
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Text(
-            "Elige tu servicio",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Gold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 8.dp)
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            items(mockServices) { service ->
-                ServiceCard(
-                    service = service,
-                    isSelected = selected?.id == service.id,
-                    onClick = { onSelect(service) }
-                )
+            CircularProgressIndicator(color = Gold)
+        }
+    } else {
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                "Elige tu servicio",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Gold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                items(services, key = { it.id }) { service ->
+                    ServiceCard(
+                        service = service,
+                        isSelected = selected?.id == service.id,
+                        onClick = { onSelect(service) }
+                    )
+                }
             }
         }
     }
@@ -546,38 +618,49 @@ private fun ServiceCard(service: Service, isSelected: Boolean, onClick: () -> Un
 }
 
 // ══════════════════════════════════════════════════════════════════
-// Step 2: Stylist Selection
+// Step 2: Barber Selection
 // ══════════════════════════════════════════════════════════════════
 @Composable
-private fun Step2StylistSelection(
-    selected: Stylist?,
-    onSelect: (Stylist) -> Unit
+private fun Step2BarberSelection(
+    barbers: List<BookingViewModel.BarberItem>,
+    selected: BookingViewModel.BarberItem?,
+    onSelect: (BookingViewModel.BarberItem) -> Unit,
+    isLoading: Boolean
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Text(
-            "Elige tu peluquero/a",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Gold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 8.dp)
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            items(mockStylists) { stylist ->
-                StylistCard(
-                    stylist = stylist,
-                    isSelected = selected?.name == stylist.name,
-                    onClick = { onSelect(stylist) }
-                )
+            CircularProgressIndicator(color = Gold)
+        }
+    } else {
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                "Elige tu peluquero/a",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Gold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                items(barbers, key = { it.id }) { barber ->
+                    BarberCard(
+                        barber = barber,
+                        isSelected = selected?.id == barber.id,
+                        onClick = { onSelect(barber) }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun StylistCard(stylist: Stylist, isSelected: Boolean, onClick: () -> Unit) {
+private fun BarberCard(barber: BookingViewModel.BarberItem, isSelected: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -611,7 +694,7 @@ private fun StylistCard(stylist: Stylist, isSelected: Boolean, onClick: () -> Un
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                if (stylist.initial == "?") {
+                if (barber.initial == "?") {
                     Icon(
                         Icons.Default.Person, null,
                         tint = if (isSelected) Gold else TextGray,
@@ -619,7 +702,7 @@ private fun StylistCard(stylist: Stylist, isSelected: Boolean, onClick: () -> Un
                     )
                 } else {
                     Text(
-                        stylist.initial,
+                        barber.initial,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isSelected) Gold else White
@@ -631,13 +714,13 @@ private fun StylistCard(stylist: Stylist, isSelected: Boolean, onClick: () -> Un
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    stylist.name,
+                    barber.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = if (isSelected) Gold else White
                 )
                 Text(
-                    stylist.specialty,
+                    barber.specialty,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextGray
                 )
@@ -656,6 +739,8 @@ private fun StylistCard(stylist: Stylist, isSelected: Boolean, onClick: () -> Un
 @Composable
 private fun Step3DateTimeSelection(
     state: BookingState,
+    availableSlots: List<String>,
+    isLoading: Boolean,
     onDateSelected: (Int, Int, Int) -> Unit,
     onTimeSelected: (String) -> Unit
 ) {
@@ -699,10 +784,10 @@ private fun Step3DateTimeSelection(
         if (state.selectedDay > 0) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            val stylistName = state.selectedStylist?.name ?: ""
+            val barberName = state.selectedBarber?.name ?: ""
             Text(
-                text = if (stylistName != "Sin preferencia" && stylistName.isNotEmpty())
-                    "Horario de $stylistName"
+                text = if (barberName != "Sin preferencia")
+                    "Horario de $barberName"
                 else "Horarios disponibles",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
@@ -718,10 +803,22 @@ private fun Step3DateTimeSelection(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            TimeSlotsGrid(
-                selectedTime = state.selectedTime,
-                onTimeSelected = onTimeSelected
-            )
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Gold)
+                }
+            } else {
+                TimeSlotsGrid(
+                    slots = availableSlots,
+                    selectedTime = state.selectedTime,
+                    onTimeSelected = onTimeSelected
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -860,54 +957,54 @@ private fun CalendarView(
 
 @Composable
 private fun TimeSlotsGrid(
+    slots: List<String>,
     selectedTime: String?,
     onTimeSelected: (String) -> Unit
 ) {
-    val slots = remember { generateTimeSlots() }
+    if (slots.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "No hay horarios disponibles para este día",
+                color = TextGray,
+                fontSize = 14.sp
+            )
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.height(280.dp),
+            userScrollEnabled = false
+        ) {
+            items(slots) { time ->
+                val isSelected = time == selectedTime
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(4),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.height(280.dp),
-        userScrollEnabled = false
-    ) {
-        items(slots) { time ->
-            val isUnavailable = time in unavailableTimes
-            val isSelected = time == selectedTime
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .then(
-                        when {
-                            isSelected -> Modifier.background(Gold)
-                            isUnavailable -> Modifier
-                                .background(DarkGray)
-                                .alpha(0.4f)
-                            else -> Modifier
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .then(
+                            if (isSelected) Modifier.background(Gold)
+                            else Modifier
                                 .background(DarkGray)
                                 .border(1.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                        }
+                        )
+                        .clickable { onTimeSelected(time) }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = time,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) CarbonBlack else White
                     )
-                    .then(
-                        if (!isUnavailable) Modifier.clickable { onTimeSelected(time) }
-                        else Modifier
-                    )
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = time,
-                    fontSize = 13.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = when {
-                        isSelected -> CarbonBlack
-                        isUnavailable -> TextGray.copy(alpha = 0.5f)
-                        else -> White
-                    },
-                    textDecoration = if (isUnavailable) TextDecoration.LineThrough else null
-                )
+                }
             }
         }
     }
@@ -917,9 +1014,18 @@ private fun TimeSlotsGrid(
 // Step 4: Confirmation
 // ══════════════════════════════════════════════════════════════════
 @Composable
-private fun Step4Confirmation(state: BookingState) {
-    val service = state.selectedService ?: return
-    val stylist = state.selectedStylist ?: return
+private fun Step4Confirmation(
+    state: BookingState,
+    onConfirmBooking: () -> Unit
+) {
+    // Extraer a variables locales
+    val service = state.selectedService
+    val barber = state.selectedBarber
+
+    if (service == null || barber == null) {
+        // Si falta algún dato, volvemos al paso anterior
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -962,11 +1068,11 @@ private fun Step4Confirmation(state: BookingState) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Stylist
+                // Barber
                 ConfirmationRow(
                     icon = { Icon(Icons.Default.Person, null, tint = Gold, modifier = Modifier.size(20.dp)) },
                     label = "Peluquero/a",
-                    value = stylist.name
+                    value = barber.name
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -999,7 +1105,7 @@ private fun Step4Confirmation(state: BookingState) {
                 // XP
                 ConfirmationRow(
                     icon = { Icon(Icons.Default.Star, null, tint = GoldLight, modifier = Modifier.size(20.dp)) },
-                    label = "XP que ganaras",
+                    label = "XP que ganarás",
                     value = "+${service.xp} XP"
                 )
 
@@ -1032,6 +1138,25 @@ private fun Step4Confirmation(state: BookingState) {
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = Gold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Botón de confirmación
+                Button(
+                    onClick = onConfirmBooking,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Gold,
+                        contentColor = CarbonBlack
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        "Confirmar Reserva",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
             }
@@ -1109,7 +1234,7 @@ private fun SuccessDialog(onDismiss: () -> Unit) {
         },
         text = {
             Text(
-                "Tu cita ha sido registrada correctamente. Recibiras una confirmacion pronto.",
+                "Tu cita ha sido registrada correctamente. Recibirás una confirmación pronto.",
                 color = TextGray,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()

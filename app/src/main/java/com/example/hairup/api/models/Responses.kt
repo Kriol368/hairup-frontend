@@ -14,6 +14,7 @@ data class UserResponse(
     val email: String,
     val name: String,
     val xp: Int,
+    val points: Int,
     val admin: Boolean,
     val phone: String,
     val created: String,
@@ -24,6 +25,7 @@ data class UserResponse(
         email = email,
         name = name,
         xp = xp,
+        points = points,
         levelId = levelId,
         phone = phone,
         isAdmin = admin,
@@ -93,4 +95,74 @@ data class ProductsResponse(
 )
 data class AppointmentsResponse(
     val data: List<AppointmentResponse>
+)
+
+data class ServiceResponse(
+    val id: Int,
+    val name: String,
+    val description: String?,
+    val price: Double,
+    val duration: Int,
+    val xpReward: Int
+) {
+    fun toService(): com.example.hairup.model.Service {
+        return com.example.hairup.model.Service(
+            id = id,
+            name = name,
+            description = description ?: "",
+            price = price,
+            duration = duration,
+            xp = xpReward
+        )
+    }
+}
+
+data class ServicesResponse(
+    val data: List<ServiceResponse>
+)
+
+data class BarberResponse(
+    val id: Int,
+    val name: String,
+    val email: String,
+    val phone: String?
+)
+
+data class BarbersResponse(
+    val data: List<BarberResponse>
+)
+
+data class TimeSlot(
+    val time: String,
+    val available: Boolean,
+    val serviceId: Int? = null,
+    val serviceName: String? = null,
+    val duration: Int? = null
+)
+
+data class AvailabilityResponse(
+    val barberId: Int,
+    val barberName: String,
+    val date: String,
+    val availableSlots: List<TimeSlot>
+)
+
+data class RewardResponse(
+    val id: Int,
+    val name: String,
+    val description: String?,
+    val pointsCost: Int,
+    val minLevelId: Int,
+    val available: Boolean
+)
+
+data class RewardsResponse(
+    val data: List<RewardResponse>
+)
+
+
+data class RedeemResponse(
+    val success: Boolean,
+    val message: String,
+    val newPoints: Int?
 )

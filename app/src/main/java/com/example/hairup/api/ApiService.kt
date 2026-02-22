@@ -60,4 +60,26 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") appointmentId: Int
     ): Call<Map<String, String>>
+
+    @GET("api/services")
+    fun getServices(@Header("Authorization") token: String): Call<ServicesResponse>
+
+    @GET("api/admin-users")
+    fun getBarbers(@Header("Authorization") token: String): Call<BarbersResponse>
+
+    @GET("api/barbers/{barberId}/availability")
+    fun getBarberAvailability(
+        @Header("Authorization") token: String,
+        @Path("barberId") barberId: Int,
+        @Query("date") date: String
+    ): Call<AvailabilityResponse>
+
+    @GET("api/rewards")
+    fun getRewards(@Header("Authorization") token: String): Call<RewardsResponse>
+
+    @POST("api/rewards/redeem")
+    fun redeemReward(
+        @Header("Authorization") token: String,
+        @Body request: RedeemRequest
+    ): Call<RedeemResponse>
 }

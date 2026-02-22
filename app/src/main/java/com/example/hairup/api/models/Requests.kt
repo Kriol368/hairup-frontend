@@ -35,3 +35,7 @@ data class UpdateAppointmentRequest(
     val time: String? = null,
     val status: Int? = null
 )
+
+data class RedeemRequest(
+    val rewardId: Int
+)
