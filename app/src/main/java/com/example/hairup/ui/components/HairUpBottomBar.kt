@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Inventory2
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inventory2
@@ -65,12 +67,21 @@ val clientBottomBarItems = listOf(
     BottomBarItem("Perfil", Icons.Rounded.Person, Icons.Outlined.Person)
 )
 
-// ===== Admin tabs =====
+// ===== Admin tabs (peluqueros) =====
 val adminBottomBarItems = listOf(
     BottomBarItem("Dashboard", Icons.Rounded.Dashboard, Icons.Outlined.Dashboard),
     BottomBarItem("Citas", Icons.Rounded.CalendarMonth, Icons.Outlined.CalendarMonth),
     BottomBarItem("Productos", Icons.Rounded.Inventory2, Icons.Outlined.Inventory2),
-    BottomBarItem("Clientes", Icons.Rounded.People, Icons.Outlined.People)
+    BottomBarItem("Usuarios", Icons.Rounded.People, Icons.Outlined.People)
+)
+
+// ===== Admin Principal tabs (5 tabs con Servicios) =====
+val adminPrincipalBottomBarItems = listOf(
+    BottomBarItem("Dashboard", Icons.Rounded.Dashboard, Icons.Outlined.Dashboard),
+    BottomBarItem("Citas", Icons.Rounded.CalendarMonth, Icons.Outlined.CalendarMonth),
+    BottomBarItem("Productos", Icons.Rounded.Inventory2, Icons.Outlined.Inventory2),
+    BottomBarItem("Servicios", Icons.Rounded.ContentCut, Icons.Outlined.ContentCut),
+    BottomBarItem("Usuarios", Icons.Rounded.People, Icons.Outlined.People)
 )
 
 @Composable

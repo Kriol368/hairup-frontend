@@ -38,12 +38,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hairup.R
+import com.example.hairup.model.mockStylists
 import com.example.hairup.ui.components.AppButton
 import com.example.hairup.ui.components.AppTextInput
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (Boolean) -> Unit,
+    onLoginSuccess: (isAdmin: Boolean, stylistId: Int) -> Unit,
     onNavigateToRegister: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
@@ -139,10 +140,13 @@ fun LoginScreen(
             AppButton(
                 text = "INICIAR SESIÓN",
                 onClick = {
-                    if (email.contains("admin")) {
-                        onLoginSuccess(true)
+                    val stylist = mockStylists.find {
+                        email.trim().equals(it.email, ignoreCase = true)
+                    }
+                    if (stylist != null) {
+                        onLoginSuccess(true, stylist.id)
                     } else {
-                        onLoginSuccess(false)
+                        onLoginSuccess(false, -1)
                     }
                 }
             )
