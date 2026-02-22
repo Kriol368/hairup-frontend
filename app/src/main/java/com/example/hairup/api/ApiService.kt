@@ -32,4 +32,7 @@ interface ApiService {
 
     @GET("api/levels")
     fun getLevels(@Header("Authorization") token: String): Call<LevelsResponse>
+
+    @GET("api/products")
+    fun getProducts(@Header("Authorization") token: String): Call<ProductsResponse>
 }

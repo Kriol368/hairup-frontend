@@ -51,3 +51,29 @@ data class LevelResponse(
 data class LevelsResponse(
     val data: List<LevelResponse>
 )
+
+data class ProductResponse(
+    val id: Int,
+    val name: String,
+    val description: String,
+    val price: Double,
+    val image: String,
+    val available: Boolean,
+    val points: Int,
+    @SerializedName("categoryId") val categoryId: Int
+) {
+    fun toProduct(): com.example.hairup.model.Product {
+        return com.example.hairup.model.Product(
+            id = id,
+            name = name,
+            description = description,
+            price = price,
+            image = image,
+            available = available
+        )
+    }
+}
+
+data class ProductsResponse(
+    val data: List<ProductResponse>
+)
