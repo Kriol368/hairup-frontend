@@ -172,9 +172,30 @@ class BookingViewModel(
             viewModelScope.launch {
                 result.fold(
                     onSuccess = { bookingId ->
-                        _bookingSuccess.value = bookingId
-                        _isLoading.value = false
-                        callback(true)
+                        // Buscar el servicio para obtener los puntos
+                        val service = _services.value.find { it.id == serviceId }
+                        val pointsToAdd = service?.xp ?: 0
+
+                        if (pointsToAdd > 0) {
+                            // Crear lista de PurchaseItem simulada para usar el mismo método
+                            // Necesitamos obtener el producto/servicio como si fuera una compra
+                            // Pero como no tenemos un producto real, necesitamos otra aproximación
+
+                            // Alternativa 1: Usar el repositorio directamente con el token y puntos
+                            // Necesitaríamos añadir un método en ShopRepository para esto
+
+                            // Por ahora, marcar éxito y luego actualizaremos
+                            _bookingSuccess.value = bookingId
+                            _isLoading.value = false
+                            callback(true)
+
+                            // Aquí deberíamos llamar a un método para añadir puntos
+                            addPointsForBooking(serviceId, pointsToAdd)
+                        } else {
+                            _bookingSuccess.value = bookingId
+                            _isLoading.value = false
+                            callback(true)
+                        }
                     },
                     onFailure = { exception ->
                         _errorMessage.value = exception.message ?: "Error al crear la cita"
@@ -184,6 +205,49 @@ class BookingViewModel(
                 )
             }
         }
+    }
+
+    // Nuevo método para añadir puntos de la cita
+    private fun addPointsForBooking(serviceId: Int, points: Int) {
+        val token = sessionManager.getToken() ?: return
+
+        // Necesitamos el ShopRepository
+        val shopRepository = com.example.hairup.data.repository.ShopRepository()
+
+        // Crear un PurchaseItem ficticio (solo para usar el método existente)
+        // Esto no es ideal, mejor sería tener un método específico
+
+        // Alternativa: usar directamente el API call
+        val request = com.example.hairup.api.models.AddPointsRequest(points)
+
+        // Llamada directa al API
+        val call = com.example.hairup.api.RetrofitClient.apiService.addPoints("Bearer $token", request)
+        call.enqueue(object : retrofit2.Callback<com.example.hairup.api.models.AddPointsResponse> {
+            override fun onResponse(
+                call: retrofit2.Call<com.example.hairup.api.models.AddPointsResponse>,
+                response: retrofit2.Response<com.example.hairup.api.models.AddPointsResponse>
+            ) {
+                if (response.isSuccessful) {
+                    response.body()?.let { body ->
+                        if (body.success) {
+                            // Actualizar usuario en SessionManager
+                            sessionManager.getUser()?.let { user ->
+                                val updatedUser = user.copy(
+                                    xp = body.newXp,
+                                    points = body.newPoints
+                                )
+                                sessionManager.saveAuthData(token, updatedUser)
+                            }
+                            Log.d("BookingViewModel", "Puntos añadidos por cita: $points")
+                        }
+                    }
+                }
+            }
+
+            override fun onFailure(call: retrofit2.Call<com.example.hairup.api.models.AddPointsResponse>, t: Throwable) {
+                Log.e("BookingViewModel", "Error al añadir puntos de cita", t)
+            }
+        })
     }
 
     fun resetBookingSuccess() {

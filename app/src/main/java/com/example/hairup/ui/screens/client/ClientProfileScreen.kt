@@ -87,7 +87,8 @@ private val GreenSuccess = Color(0xFF4CAF50)
 
 @Composable
 fun ProfileScreen(
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onProfileUpdated: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
@@ -98,6 +99,10 @@ fun ProfileScreen(
     val profileState by viewModel.profileState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
     val passwordState by viewModel.passwordState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadProfile()
+    }
 
 
     // Estados locales
