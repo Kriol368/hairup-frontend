@@ -70,31 +70,6 @@ class AppointmentRepository {
         appointmentId: Int,
         callback: (Result<Boolean>) -> Unit
     ) {
-        val request = UpdateAppointmentRequest(status = 3)
-
-        RetrofitClient.apiService.updateAppointment("Bearer $token", appointmentId, request).enqueue(object : Callback<AppointmentResponse> {
-            override fun onResponse(
-                call: Call<AppointmentResponse>,
-                response: Response<AppointmentResponse>
-            ) {
-                if (response.isSuccessful) {
-                    callback(Result.success(true))
-                } else {
-                    callback(Result.failure(Exception("Error ${response.code()}")))
-                }
-            }
-
-            override fun onFailure(call: Call<AppointmentResponse>, t: Throwable) {
-                callback(Result.failure(t))
-            }
-        })
-    }
-
-    fun deleteAppointment(
-        token: String,
-        appointmentId: Int,
-        callback: (Result<Boolean>) -> Unit
-    ) {
         RetrofitClient.apiService.deleteAppointment("Bearer $token", appointmentId).enqueue(object : Callback<Map<String, String>> {
             override fun onResponse(
                 call: Call<Map<String, String>>,
@@ -103,7 +78,12 @@ class AppointmentRepository {
                 if (response.isSuccessful) {
                     callback(Result.success(true))
                 } else {
-                    callback(Result.failure(Exception("Error ${response.code()}")))
+                    val errorMsg = try {
+                        response.errorBody()?.string() ?: "Error ${response.code()}"
+                    } catch (e: Exception) {
+                        "Error ${response.code()}"
+                    }
+                    callback(Result.failure(Exception(errorMsg)))
                 }
             }
 
