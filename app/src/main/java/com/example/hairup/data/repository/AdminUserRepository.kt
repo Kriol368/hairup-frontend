@@ -12,19 +12,17 @@ import retrofit2.Response
 
 class AdminUserRepository {
 
-    private val TAG = "AdminUserRepository"
+    private val tag = "AdminUserRepository"
 
     fun getAllUsers(
-        token: String,
-        callback: (Result<List<AdminUser>>) -> Unit
+        token: String, callback: (Result<List<AdminUser>>) -> Unit
     ) {
-        Log.d(TAG, "Obteniendo todos los usuarios")
+        Log.d(tag, "Obteniendo todos los usuarios")
 
         RetrofitClient.apiService.getAllUsers("Bearer $token")
-            .enqueue(object : retrofit2.Callback<AllUsersResponse> {
+            .enqueue(object : Callback<AllUsersResponse> {
                 override fun onResponse(
-                    call: Call<AllUsersResponse>,
-                    response: Response<AllUsersResponse>
+                    call: Call<AllUsersResponse>, response: Response<AllUsersResponse>
                 ) {
                     if (response.isSuccessful) {
                         val users = response.body()?.data?.map { it.toAdminUser() } ?: emptyList()
@@ -32,7 +30,7 @@ class AdminUserRepository {
                     } else {
                         val errorMsg = try {
                             response.errorBody()?.string() ?: "Error ${response.code()}"
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             "Error ${response.code()}"
                         }
                         callback(Result.failure(Exception(errorMsg)))
@@ -46,12 +44,9 @@ class AdminUserRepository {
     }
 
     fun toggleAdmin(
-        token: String,
-        userId: Int,
-        makeAdmin: Boolean,
-        callback: (Result<Map<String, Any>>) -> Unit
+        token: String, userId: Int, makeAdmin: Boolean, callback: (Result<Map<String, Any>>) -> Unit
     ) {
-        Log.d(TAG, "${if (makeAdmin) "Dando" else "Quitando"} admin a usuario $userId")
+        Log.d(tag, "${if (makeAdmin) "Dando" else "Quitando"} admin a usuario $userId")
 
         val request = ToggleAdminRequest(userId)
         val call = if (makeAdmin) {
@@ -60,10 +55,9 @@ class AdminUserRepository {
             RetrofitClient.apiService.removeAdmin("Bearer $token", request)
         }
 
-        call.enqueue(object : retrofit2.Callback<Map<String, Any>> {
+        call.enqueue(object : Callback<Map<String, Any>> {
             override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
+                call: Call<Map<String, Any>>, response: Response<Map<String, Any>>
             ) {
                 if (response.isSuccessful) {
                     response.body()?.let { callback(Result.success(it)) }
@@ -71,7 +65,7 @@ class AdminUserRepository {
                 } else {
                     val errorMsg = try {
                         response.errorBody()?.string() ?: "Error ${response.code()}"
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         "Error ${response.code()}"
                     }
                     callback(Result.failure(Exception(errorMsg)))
@@ -85,20 +79,16 @@ class AdminUserRepository {
     }
 
     fun toggleActive(
-        token: String,
-        userId: Int,
-        active: Boolean,
-        callback: (Result<Map<String, Any>>) -> Unit
+        token: String, userId: Int, active: Boolean, callback: (Result<Map<String, Any>>) -> Unit
     ) {
-        Log.d(TAG, "${if (active) "Habilitando" else "Deshabilitando"} usuario $userId")
+        Log.d(tag, "${if (active) "Habilitando" else "Deshabilitando"} usuario $userId")
 
         val request = ToggleActiveRequest(userId, active)
 
         RetrofitClient.apiService.toggleActive("Bearer $token", request)
-            .enqueue(object : retrofit2.Callback<Map<String, Any>> {
+            .enqueue(object : Callback<Map<String, Any>> {
                 override fun onResponse(
-                    call: Call<Map<String, Any>>,
-                    response: Response<Map<String, Any>>
+                    call: Call<Map<String, Any>>, response: Response<Map<String, Any>>
                 ) {
                     if (response.isSuccessful) {
                         response.body()?.let { callback(Result.success(it)) }
@@ -106,7 +96,7 @@ class AdminUserRepository {
                     } else {
                         val errorMsg = try {
                             response.errorBody()?.string() ?: "Error ${response.code()}"
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             "Error ${response.code()}"
                         }
                         callback(Result.failure(Exception(errorMsg)))

@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,7 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,15 +50,13 @@ fun AdminHomeScreen(
     val sessionManager = remember { SessionManager(context) }
     val currentUser = sessionManager.getUser()
 
-    var selectedItem by remember { mutableStateOf(0) }
+    var selectedItem by remember { mutableIntStateOf(0) }
 
-    // Determinar si es admin principal (puedes ajustar esta lógica según tu criterio)
-    // Por ejemplo, admin principal podría ser el ID 1 o un email específico
+
     val isAdminPrincipal = currentUser?.id == 1 || currentUser?.email == "admin@hairup.com"
 
     val bottomBarItems = if (isAdminPrincipal) adminPrincipalBottomBarItems else adminBottomBarItems
 
-    // Si no hay usuario, redirigir al login
     LaunchedEffect(currentUser) {
         if (currentUser == null) {
             onLogout()
@@ -66,15 +64,12 @@ fun AdminHomeScreen(
     }
 
     Scaffold(
-        containerColor = CarbonBlack,
-        bottomBar = {
+        containerColor = CarbonBlack, bottomBar = {
             HairUpBottomBar(
                 items = bottomBarItems,
                 selectedIndex = selectedItem,
-                onItemSelected = { selectedItem = it }
-            )
-        }
-    ) { innerPadding ->
+                onItemSelected = { selectedItem = it })
+        }) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -82,8 +77,7 @@ fun AdminHomeScreen(
                 .background(CarbonBlack)
         ) {
             AdminHeader(
-                stylistName = currentUser?.name ?: "Admin",
-                onLogout = onLogout
+                stylistName = currentUser?.name ?: "Admin", onLogout = onLogout
             )
 
             Box(
@@ -94,7 +88,7 @@ fun AdminHomeScreen(
                 if (isAdminPrincipal) {
                     when (selectedItem) {
                         0 -> AdminDashboardScreen()
-                        1 -> AdminAppointmentsScreen(stylistId = 0)  // 0 = todas las citas
+                        1 -> AdminAppointmentsScreen(stylistId = 0)
                         2 -> AdminProductsScreen()
                         3 -> AdminServicesScreen()
                         4 -> AdminUsersScreen()
@@ -126,8 +120,7 @@ private fun AdminHeader(stylistName: String, onLogout: () -> Unit) {
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Gold.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
+                    .background(Gold.copy(alpha = 0.2f)), contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.AdminPanelSettings,
@@ -154,7 +147,7 @@ private fun AdminHeader(stylistName: String, onLogout: () -> Unit) {
 
         IconButton(onClick = onLogout) {
             Icon(
-                imageVector = Icons.Default.Logout,
+                imageVector = Icons.AutoMirrored.Filled.Logout,
                 contentDescription = "Cerrar sesión",
                 tint = TextGray,
                 modifier = Modifier.size(22.dp)

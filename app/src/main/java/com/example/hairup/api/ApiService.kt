@@ -36,9 +36,6 @@ interface ApiService {
     @GET("api/products")
     fun getProducts(@Header("Authorization") token: String): Call<ProductsResponse>
 
-    @GET("api/appointments/past")
-    fun getPastAppointments(@Header("Authorization") token: String): Call<List<AppointmentResponse>>
-
     @GET("api/appointments")
     fun getUserAppointments(@Header("Authorization") token: String): Call<AppointmentsResponse>
 

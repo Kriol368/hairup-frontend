@@ -36,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -72,7 +74,6 @@ private val CarbonBlack = Color(0xFF121212)
 private val DarkGray = Color(0xFF1E1E1E)
 private val CardBg = Color(0xFF1A1A1A)
 private val Gold = Color(0xFFD4AF37)
-private val GoldLight = Color(0xFFE2C478)
 private val TextGray = Color(0xFFB0B0B0)
 private val White = Color(0xFFFFFFFF)
 private val GreenConfirmed = Color(0xFF4CAF50)
@@ -102,7 +103,6 @@ fun AdminProductsScreen() {
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Mostrar errores
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -110,7 +110,6 @@ fun AdminProductsScreen() {
         }
     }
 
-    // Mostrar éxito
     LaunchedEffect(operationSuccess) {
         if (operationSuccess) {
             successMessage?.let {
@@ -208,8 +207,7 @@ fun AdminProductsScreen() {
             product = editingProduct,
             categories = categories,
             onAddCategory = { categoryName ->
-                // Aquí llamarías a un método del ViewModel para crear categoría
-                // Por ahora solo mostramos un mensaje
+
                 viewModel.createCategory(categoryName)
             },
             onDismiss = { showDialog = false; editingProduct = null },
@@ -435,8 +433,7 @@ private fun ProductDialog(
     var pointsText by remember { mutableStateOf(product?.points?.toString() ?: "0") }
     var available by remember { mutableStateOf(product?.available ?: true) }
 
-    // Para categorías
-    var selectedCategoryId by remember { mutableStateOf(product?.categoryId ?: -1) }
+    var selectedCategoryId by remember { mutableIntStateOf(product?.categoryId ?: -1) }
     var categoryExpanded by remember { mutableStateOf(false) }
     var showNewCategoryField by remember { mutableStateOf(false) }
     var newCategoryText by remember { mutableStateOf("") }
@@ -471,7 +468,6 @@ private fun ProductDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Nombre
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; nameError = false },
@@ -485,7 +481,6 @@ private fun ProductDialog(
                     } else null
                 )
 
-                // Descripción
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -495,7 +490,6 @@ private fun ProductDialog(
                     colors = fieldColors
                 )
 
-                // Precio
                 OutlinedTextField(
                     value = priceText,
                     onValueChange = { priceText = it; priceError = false },
@@ -510,7 +504,6 @@ private fun ProductDialog(
                     } else null
                 )
 
-                // Puntos
                 OutlinedTextField(
                     value = pointsText,
                     onValueChange = { pointsText = it; pointsError = false },
@@ -525,7 +518,6 @@ private fun ProductDialog(
                     } else null
                 )
 
-                // Categoría (dropdown)
                 ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
                     onExpandedChange = { categoryExpanded = !categoryExpanded }
@@ -550,7 +542,6 @@ private fun ProductDialog(
                         onDismissRequest = { categoryExpanded = false },
                         modifier = Modifier.background(DarkGray)
                     ) {
-                        // Opción "Sin categoría"
                         DropdownMenuItem(
                             text = {
                                 Text(
@@ -566,7 +557,6 @@ private fun ProductDialog(
                             }
                         )
 
-                        // Separador si hay categorías
                         if (categories.isNotEmpty()) {
                             Divider(
                                 color = LeatherBrown.copy(alpha = 0.3f),
@@ -574,7 +564,6 @@ private fun ProductDialog(
                             )
                         }
 
-                        // Categorías existentes
                         categories.forEach { (id, name) ->
                             DropdownMenuItem(
                                 text = {
@@ -592,13 +581,11 @@ private fun ProductDialog(
                             )
                         }
 
-                        // Separador
                         Divider(
                             color = LeatherBrown.copy(alpha = 0.3f),
                             thickness = 0.5.dp
                         )
 
-                        // Opción nueva categoría
                         DropdownMenuItem(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -626,7 +613,6 @@ private fun ProductDialog(
                     }
                 }
 
-                // Campo inline para nueva categoría
                 if (showNewCategoryField) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(
@@ -652,8 +638,6 @@ private fun ProductDialog(
                                             onAddCategory(trimmed)
                                             showNewCategoryField = false
                                             newCategoryText = ""
-                                            // Opcional: seleccionar la nueva categoría automáticamente
-                                            // Necesitaríamos recargar categorías y obtener el ID
                                         }
                                     }
                                 },
@@ -682,7 +666,6 @@ private fun ProductDialog(
                     }
                 }
 
-                // URL de imagen
                 OutlinedTextField(
                     value = imageUrl,
                     onValueChange = { imageUrl = it },
@@ -693,7 +676,6 @@ private fun ProductDialog(
                     colors = fieldColors
                 )
 
-                // Checkbox para disponible
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

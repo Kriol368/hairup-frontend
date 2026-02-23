@@ -9,7 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class AdminAppointmentViewModel(
     private val sessionManager: SessionManager,
@@ -26,19 +27,16 @@ class AdminAppointmentViewModel(
     val errorMessage: StateFlow<String?> = _errorMessage
 
     private val _successMessage = MutableStateFlow<String?>(null)
-    val successMessage: StateFlow<String?> = _successMessage
 
     private val _operationSuccess = MutableStateFlow(false)
     val operationSuccess: StateFlow<Boolean> = _operationSuccess
 
-    // Obtener fecha actual en formato YYYY-MM-DD
     private val todayDate: String
         get() {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             return dateFormat.format(Date())
         }
 
-    // Citas filtradas
     val todayAppointments: List<AdminAppointment>
         get() = _appointments.value.filter { it.date == todayDate }
 
@@ -52,9 +50,6 @@ class AdminAppointmentViewModel(
             it.date < todayDate || it.status == 2 || it.status == 3
         }
 
-    val pendingAppointments: List<AdminAppointment>
-        get() = _appointments.value.filter { it.status == 0 }
-
     fun loadAppointments(stylistId: Int = 0) {
         val token = sessionManager.getToken()
         if (token.isNullOrEmpty()) {
@@ -66,20 +61,17 @@ class AdminAppointmentViewModel(
 
         repository.getAllAppointments(token) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { appointments ->
-                        _appointments.value = if (stylistId == 0) {
-                            appointments
-                        } else {
-                            appointments.filter { it.stylistId == stylistId }
-                        }
-                        _isLoading.value = false
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al cargar citas"
-                        _isLoading.value = false
+                result.fold(onSuccess = { appointments ->
+                    _appointments.value = if (stylistId == 0) {
+                        appointments
+                    } else {
+                        appointments.filter { it.stylistId == stylistId }
                     }
-                )
+                    _isLoading.value = false
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al cargar citas"
+                    _isLoading.value = false
+                })
             }
         }
     }
@@ -108,49 +100,19 @@ class AdminAppointmentViewModel(
 
         repository.updateAppointmentStatus(token, appointmentId, status) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = {
-                        _successMessage.value = when (status) {
-                            1 -> "Cita confirmada"
-                            2 -> "Cita completada"
-                            3 -> "Cita cancelada"
-                            else -> "Estado actualizado"
-                        }
-                        _operationSuccess.value = true
-                        loadAppointments()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al actualizar cita"
-                        _isLoading.value = false
+                result.fold(onSuccess = {
+                    _successMessage.value = when (status) {
+                        1 -> "Cita confirmada"
+                        2 -> "Cita completada"
+                        3 -> "Cita cancelada"
+                        else -> "Estado actualizado"
                     }
-                )
-            }
-        }
-    }
-
-    fun deleteAppointment(appointmentId: Int) {
-        val token = sessionManager.getToken()
-        if (token.isNullOrEmpty()) {
-            _errorMessage.value = "No hay sesión activa"
-            return
-        }
-
-        _isLoading.value = true
-        _operationSuccess.value = false
-
-        repository.cancelAppointment(token, appointmentId) { result ->
-            viewModelScope.launch {
-                result.fold(
-                    onSuccess = {
-                        _successMessage.value = "Cita eliminada"
-                        _operationSuccess.value = true
-                        loadAppointments()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al eliminar cita"
-                        _isLoading.value = false
-                    }
-                )
+                    _operationSuccess.value = true
+                    loadAppointments()
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al actualizar cita"
+                    _isLoading.value = false
+                })
             }
         }
     }

@@ -46,16 +46,13 @@ class AdminUserViewModel(
 
         repository.getAllUsers(token) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { users ->
-                        _users.value = users
-                        _isLoading.value = false
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al cargar usuarios"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { users ->
+                    _users.value = users
+                    _isLoading.value = false
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al cargar usuarios"
+                    _isLoading.value = false
+                })
             }
         }
     }
@@ -77,18 +74,15 @@ class AdminUserViewModel(
 
         repository.toggleAdmin(token, userId, makeAdmin) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { response ->
-                        _successMessage.value = response["message"] as? String
-                            ?: if (makeAdmin) "Admin agregado" else "Admin removido"
-                        _operationSuccess.value = true
-                        loadUsers()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al cambiar permisos"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { response ->
+                    _successMessage.value = response["message"] as? String
+                        ?: if (makeAdmin) "Admin agregado" else "Admin removido"
+                    _operationSuccess.value = true
+                    loadUsers()
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al cambiar permisos"
+                    _isLoading.value = false
+                })
             }
         }
     }
@@ -110,18 +104,15 @@ class AdminUserViewModel(
 
         repository.toggleActive(token, userId, active) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { response ->
-                        _successMessage.value = response["message"] as? String
-                            ?: if (active) "Usuario habilitado" else "Usuario deshabilitado"
-                        _operationSuccess.value = true
-                        loadUsers()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al cambiar estado"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { response ->
+                    _successMessage.value = response["message"] as? String
+                        ?: if (active) "Usuario habilitado" else "Usuario deshabilitado"
+                    _operationSuccess.value = true
+                    loadUsers()
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al cambiar estado"
+                    _isLoading.value = false
+                })
             }
         }
     }
@@ -134,19 +125,18 @@ class AdminUserViewModel(
     }
 
     fun getFilteredUsers(searchQuery: String, filter: String): List<AdminUser> {
-        return _users.value
-            .filter { user ->
+        return _users.value.filter { user ->
                 when (filter) {
                     "Clientes" -> !user.isAdmin
                     "Admins" -> user.isAdmin
                     "Deshabilitados" -> !user.isActive
                     else -> true
                 }
-            }
-            .filter { user ->
-                searchQuery.isBlank() ||
-                        user.name.contains(searchQuery, ignoreCase = true) ||
-                        user.email.contains(searchQuery, ignoreCase = true)
+            }.filter { user ->
+                searchQuery.isBlank() || user.name.contains(
+                    searchQuery,
+                    ignoreCase = true
+                ) || user.email.contains(searchQuery, ignoreCase = true)
             }
     }
 }

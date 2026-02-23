@@ -10,37 +10,35 @@ import retrofit2.Response
 
 class AdminServiceRepository {
 
-    private val TAG = "AdminServiceRepository"
+    private val tag = "AdminServiceRepository"
 
     fun createService(
-        token: String,
-        request: CreateServiceRequest,
-        callback: (Result<Map<String, Any>>) -> Unit
+        token: String, request: CreateServiceRequest, callback: (Result<Map<String, Any>>) -> Unit
     ) {
-        Log.d(TAG, "Creando servicio: ${request.name}")
+        Log.d(tag, "Creando servicio: ${request.name}")
 
-        RetrofitClient.apiService.createService("Bearer $token", request).enqueue(object : Callback<Map<String, Any>> {
-            override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
-            ) {
-                if (response.isSuccessful) {
-                    response.body()?.let { callback(Result.success(it)) }
-                        ?: callback(Result.failure(Exception("Respuesta vacía")))
-                } else {
-                    val errorMsg = try {
-                        response.errorBody()?.string() ?: "Error ${response.code()}"
-                    } catch (e: Exception) {
-                        "Error ${response.code()}"
+        RetrofitClient.apiService.createService("Bearer $token", request)
+            .enqueue(object : Callback<Map<String, Any>> {
+                override fun onResponse(
+                    call: Call<Map<String, Any>>, response: Response<Map<String, Any>>
+                ) {
+                    if (response.isSuccessful) {
+                        response.body()?.let { callback(Result.success(it)) }
+                            ?: callback(Result.failure(Exception("Respuesta vacía")))
+                    } else {
+                        val errorMsg = try {
+                            response.errorBody()?.string() ?: "Error ${response.code()}"
+                        } catch (_: Exception) {
+                            "Error ${response.code()}"
+                        }
+                        callback(Result.failure(Exception(errorMsg)))
                     }
-                    callback(Result.failure(Exception(errorMsg)))
                 }
-            }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                callback(Result.failure(t))
-            }
-        })
+                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    callback(Result.failure(t))
+                }
+            })
     }
 
     fun updateService(
@@ -49,60 +47,58 @@ class AdminServiceRepository {
         request: UpdateServiceRequest,
         callback: (Result<Map<String, Any>>) -> Unit
     ) {
-        Log.d(TAG, "Actualizando servicio $serviceId")
+        Log.d(tag, "Actualizando servicio $serviceId")
 
-        RetrofitClient.apiService.updateService("Bearer $token", serviceId, request).enqueue(object : Callback<Map<String, Any>> {
-            override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
-            ) {
-                if (response.isSuccessful) {
-                    response.body()?.let { callback(Result.success(it)) }
-                        ?: callback(Result.failure(Exception("Respuesta vacía")))
-                } else {
-                    val errorMsg = try {
-                        response.errorBody()?.string() ?: "Error ${response.code()}"
-                    } catch (e: Exception) {
-                        "Error ${response.code()}"
+        RetrofitClient.apiService.updateService("Bearer $token", serviceId, request)
+            .enqueue(object : Callback<Map<String, Any>> {
+                override fun onResponse(
+                    call: Call<Map<String, Any>>, response: Response<Map<String, Any>>
+                ) {
+                    if (response.isSuccessful) {
+                        response.body()?.let { callback(Result.success(it)) }
+                            ?: callback(Result.failure(Exception("Respuesta vacía")))
+                    } else {
+                        val errorMsg = try {
+                            response.errorBody()?.string() ?: "Error ${response.code()}"
+                        } catch (_: Exception) {
+                            "Error ${response.code()}"
+                        }
+                        callback(Result.failure(Exception(errorMsg)))
                     }
-                    callback(Result.failure(Exception(errorMsg)))
                 }
-            }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                callback(Result.failure(t))
-            }
-        })
+                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    callback(Result.failure(t))
+                }
+            })
     }
 
     fun deleteService(
-        token: String,
-        serviceId: Int,
-        callback: (Result<Map<String, Any>>) -> Unit
+        token: String, serviceId: Int, callback: (Result<Map<String, Any>>) -> Unit
     ) {
-        Log.d(TAG, "Eliminando servicio $serviceId")
+        Log.d(tag, "Eliminando servicio $serviceId")
 
-        RetrofitClient.apiService.deleteService("Bearer $token", serviceId).enqueue(object : Callback<Map<String, Any>> {
-            override fun onResponse(
-                call: Call<Map<String, Any>>,
-                response: Response<Map<String, Any>>
-            ) {
-                if (response.isSuccessful) {
-                    response.body()?.let { callback(Result.success(it)) }
-                        ?: callback(Result.failure(Exception("Respuesta vacía")))
-                } else {
-                    val errorMsg = try {
-                        response.errorBody()?.string() ?: "Error ${response.code()}"
-                    } catch (e: Exception) {
-                        "Error ${response.code()}"
+        RetrofitClient.apiService.deleteService("Bearer $token", serviceId)
+            .enqueue(object : Callback<Map<String, Any>> {
+                override fun onResponse(
+                    call: Call<Map<String, Any>>, response: Response<Map<String, Any>>
+                ) {
+                    if (response.isSuccessful) {
+                        response.body()?.let { callback(Result.success(it)) }
+                            ?: callback(Result.failure(Exception("Respuesta vacía")))
+                    } else {
+                        val errorMsg = try {
+                            response.errorBody()?.string() ?: "Error ${response.code()}"
+                        } catch (_: Exception) {
+                            "Error ${response.code()}"
+                        }
+                        callback(Result.failure(Exception(errorMsg)))
                     }
-                    callback(Result.failure(Exception(errorMsg)))
                 }
-            }
 
-            override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
-                callback(Result.failure(t))
-            }
-        })
+                override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                    callback(Result.failure(t))
+                }
+            })
     }
 }

@@ -7,11 +7,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.hairup.data.SessionManager
+import com.example.hairup.ui.screens.ClientHomeScreen
 import com.example.hairup.ui.screens.LoginScreen
 import com.example.hairup.ui.screens.RegisterScreen
-import com.example.hairup.ui.screens.ClientHomeScreen
-import com.example.hairup.ui.screens.client.BookingScreen
 import com.example.hairup.ui.screens.admin.AdminHomeScreen
+import com.example.hairup.ui.screens.client.BookingScreen
 import com.example.hairup.ui.screens.client.LoyaltyScreen
 
 @Composable
@@ -22,35 +22,29 @@ fun AppNavigation() {
 
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
-            LoginScreen(
-                onLoginSuccess = { isAdmin ->
-                    if (isAdmin) {
-                        navController.navigate("admin_home") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                    } else {
-                        navController.navigate("client_home") {
-                            popUpTo("login") { inclusive = true }
-                        }
+            LoginScreen(onLoginSuccess = { isAdmin ->
+                if (isAdmin) {
+                    navController.navigate("admin_home") {
+                        popUpTo("login") { inclusive = true }
                     }
-                },
-                onNavigateToRegister = {
-                    navController.navigate("register")
-                }
-            )
-        }
-
-        composable("register") {
-            RegisterScreen(
-                onRegisterSuccess = {
+                } else {
                     navController.navigate("client_home") {
                         popUpTo("login") { inclusive = true }
                     }
-                },
-                onNavigateBack = {
-                    navController.popBackStack()
                 }
-            )
+            }, onNavigateToRegister = {
+                navController.navigate("register")
+            })
+        }
+
+        composable("register") {
+            RegisterScreen(onRegisterSuccess = {
+                navController.navigate("client_home") {
+                    popUpTo("login") { inclusive = true }
+                }
+            }, onNavigateBack = {
+                navController.popBackStack()
+            })
         }
 
         composable("client_home") {
@@ -62,21 +56,18 @@ fun AppNavigation() {
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
-                }
-            )
+                })
         }
 
         composable("client/loyalty") {
             LoyaltyScreen(
-                onBack = { navController.popBackStack() }
-            )
+                onBack = { navController.popBackStack() })
         }
 
         composable("booking") {
             BookingScreen(
                 onBookingComplete = { navController.popBackStack() },
-                onBack = { navController.popBackStack() }
-            )
+                onBack = { navController.popBackStack() })
         }
 
         composable("admin_home") {

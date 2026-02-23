@@ -35,9 +35,6 @@ data class AdminUser(
         get() = if (isActive) Color(0xFFFFFFFF) else Color(0xFFB0B0B0)
 
     val initials: String
-        get() = name
-            .split(" ")
-            .take(2)
-            .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+        get() = name.split(" ").take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }
             .joinToString("")
 }

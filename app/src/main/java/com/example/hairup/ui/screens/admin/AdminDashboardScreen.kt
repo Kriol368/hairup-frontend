@@ -57,7 +57,6 @@ private val GoldLight = Color(0xFFE2C478)
 private val GoldDark = Color(0xFFA68829)
 private val TextGray = Color(0xFFB0B0B0)
 private val White = Color(0xFFFFFFFF)
-private val GreenConfirmed = Color(0xFF4CAF50)
 private val AmberYellow = Color(0xFFFFC107)
 private val BlueAccent = Color(0xFF64B5F6)
 
@@ -110,9 +109,7 @@ fun AdminDashboardScreen() {
         } else {
             // Header card
             DashboardHeaderCard(
-                name = stylistName,
-                specialty = stylistSpecialty,
-                isGenericAdmin = isGenericAdmin
+                name = stylistName, specialty = stylistSpecialty, isGenericAdmin = isGenericAdmin
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -124,7 +121,6 @@ fun AdminDashboardScreen() {
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            // KPIs
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -168,7 +164,6 @@ fun AdminDashboardScreen() {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Lista de citas de hoy
             if (todayAppointments.isNotEmpty()) {
                 Text(
                     text = if (isGenericAdmin) "Citas de hoy (todas)" else "Tus citas de hoy",
@@ -178,8 +173,7 @@ fun AdminDashboardScreen() {
                 )
                 todayAppointments.forEach { appt ->
                     MiniAppointmentRow(
-                        appointment = appt,
-                        showStylistName = isGenericAdmin
+                        appointment = appt, showStylistName = isGenericAdmin
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -205,9 +199,7 @@ fun AdminDashboardScreen() {
 
 @Composable
 private fun DashboardHeaderCard(
-    name: String,
-    specialty: String,
-    isGenericAdmin: Boolean
+    name: String, specialty: String, isGenericAdmin: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -235,8 +227,7 @@ private fun DashboardHeaderCard(
                 modifier = Modifier
                     .size(52.dp)
                     .clip(CircleShape)
-                    .background(Gold.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
+                    .background(Gold.copy(alpha = 0.2f)), contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (isGenericAdmin) Icons.Default.Settings else Icons.Default.Star,
@@ -254,15 +245,14 @@ private fun DashboardHeaderCard(
                     color = White
                 )
                 Text(
-                    text = specialty,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextGray
+                    text = specialty, style = MaterialTheme.typography.bodyMedium, color = TextGray
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = java.text.SimpleDateFormat("EEEE, dd MMM yyyy", java.util.Locale("es", "ES"))
-                        .format(java.util.Date())
-                        .replaceFirstChar { it.uppercase() },
+                    text = java.text.SimpleDateFormat(
+                        "EEEE, dd MMM yyyy",
+                        java.util.Locale("es", "ES")
+                    ).format(java.util.Date()).replaceFirstChar { it.uppercase() },
                     style = MaterialTheme.typography.bodySmall,
                     color = TextGray.copy(alpha = 0.7f)
                 )
@@ -291,8 +281,7 @@ private fun StatCard(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(iconColor.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+                    .background(iconColor.copy(alpha = 0.15f)), contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
@@ -321,8 +310,7 @@ private fun StatCard(
 
 @Composable
 private fun MiniAppointmentRow(
-    appointment: MiniAppointment,
-    showStylistName: Boolean
+    appointment: MiniAppointment, showStylistName: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),

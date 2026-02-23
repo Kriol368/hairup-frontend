@@ -56,12 +56,9 @@ private val GrayInactive = Color(0xFF8A8A8A)
 private val TopBorderGold = Color(0xFFDAA520)
 
 data class BottomBarItem(
-    val label: String,
-    val activeIcon: ImageVector,
-    val inactiveIcon: ImageVector
+    val label: String, val activeIcon: ImageVector, val inactiveIcon: ImageVector
 )
 
-// ===== Client tabs =====
 val clientBottomBarItems = listOf(
     BottomBarItem("Inicio", Icons.Rounded.Home, Icons.Outlined.Home),
     BottomBarItem("Citas", Icons.Rounded.CalendarMonth, Icons.Outlined.CalendarMonth),
@@ -70,7 +67,6 @@ val clientBottomBarItems = listOf(
     BottomBarItem("Perfil", Icons.Rounded.Person, Icons.Outlined.Person)
 )
 
-// ===== Admin tabs (peluqueros) =====
 val adminBottomBarItems = listOf(
     BottomBarItem("Dashboard", Icons.Rounded.Dashboard, Icons.Outlined.Dashboard),
     BottomBarItem("Citas", Icons.Rounded.CalendarMonth, Icons.Outlined.CalendarMonth),
@@ -78,7 +74,6 @@ val adminBottomBarItems = listOf(
     BottomBarItem("Usuarios", Icons.Rounded.People, Icons.Outlined.People)
 )
 
-// ===== Admin Principal tabs (5 tabs con Servicios) =====
 val adminPrincipalBottomBarItems = listOf(
     BottomBarItem("Dashboard", Icons.Rounded.Dashboard, Icons.Outlined.Dashboard),
     BottomBarItem("Citas", Icons.Rounded.CalendarMonth, Icons.Outlined.CalendarMonth),
@@ -100,7 +95,6 @@ fun HairUpBottomBar(
             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
             .background(BarBackground)
     ) {
-        // Top gold border
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -131,10 +125,7 @@ fun HairUpBottomBar(
 
 @Composable
 private fun BottomBarTab(
-    item: BottomBarItem,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    item: BottomBarItem, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier
 ) {
     val iconColor by animateColorAsState(
         targetValue = if (isSelected) GoldActive else GrayInactive,
@@ -151,17 +142,14 @@ private fun BottomBarTab(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(
+                interactionSource = remember { MutableInteractionSource() }, indication = ripple(
                     color = GoldActive.copy(alpha = 0.3f)
-                ),
-                onClick = onClick
+                ), onClick = onClick
             )
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Active indicator pill
         Box(
             modifier = Modifier
                 .width(24.dp)
@@ -174,7 +162,6 @@ private fun BottomBarTab(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // Icon
         Icon(
             imageVector = if (isSelected) item.activeIcon else item.inactiveIcon,
             contentDescription = item.label,
@@ -184,7 +171,6 @@ private fun BottomBarTab(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Label
         Text(
             text = item.label,
             fontSize = 11.sp,

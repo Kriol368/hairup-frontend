@@ -9,19 +9,17 @@ import retrofit2.Response
 
 class AdminDashboardRepository {
 
-    private val TAG = "AdminDashboardRepository"
+    private val tag = "AdminDashboardRepository"
 
     fun getDashboardStats(
-        token: String,
-        callback: (Result<DashboardStatsResponse>) -> Unit
+        token: String, callback: (Result<DashboardStatsResponse>) -> Unit
     ) {
-        Log.d(TAG, "Obteniendo estadísticas del dashboard")
+        Log.d(tag, "Obteniendo estadísticas del dashboard")
 
         RetrofitClient.apiService.getDashboardStats("Bearer $token")
-            .enqueue(object : retrofit2.Callback<DashboardStatsResponse> {
+            .enqueue(object : Callback<DashboardStatsResponse> {
                 override fun onResponse(
-                    call: Call<DashboardStatsResponse>,
-                    response: Response<DashboardStatsResponse>
+                    call: Call<DashboardStatsResponse>, response: Response<DashboardStatsResponse>
                 ) {
                     if (response.isSuccessful) {
                         response.body()?.let { callback(Result.success(it)) }
@@ -29,7 +27,7 @@ class AdminDashboardRepository {
                     } else {
                         val errorMsg = try {
                             response.errorBody()?.string() ?: "Error ${response.code()}"
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             "Error ${response.code()}"
                         }
                         callback(Result.failure(Exception(errorMsg)))

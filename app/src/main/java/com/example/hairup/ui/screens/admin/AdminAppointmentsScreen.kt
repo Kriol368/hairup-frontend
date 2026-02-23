@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -65,7 +66,6 @@ private val GoldLight = Color(0xFFE2C478)
 private val TextGray = Color(0xFFB0B0B0)
 private val White = Color(0xFFFFFFFF)
 private val GreenConfirmed = Color(0xFF4CAF50)
-private val AmberYellow = Color(0xFFFFC107)
 private val RedCancel = Color(0xFFE53935)
 private val BlueCompleted = Color(0xFF64B5F6)
 
@@ -80,14 +80,13 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
     val appointments by viewModel.appointments.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    val successMessage by viewModel.successMessage.collectAsState()
     val operationSuccess by viewModel.operationSuccess.collectAsState()
 
     val todayAppointments = viewModel.todayAppointments
     val upcomingAppointments = viewModel.upcomingAppointments
     val pastAppointments = viewModel.pastAppointments
 
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Hoy", "Próximas", "Pasadas")
 
     var showConfirmDialog by remember { mutableStateOf(false) }
@@ -95,12 +94,10 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
     var showCompleteDialog by remember { mutableStateOf(false) }
     var targetAppointment by remember { mutableStateOf<AdminAppointment?>(null) }
 
-    // Cargar citas al iniciar
     LaunchedEffect(stylistId) {
         viewModel.loadAppointments(stylistId)
     }
 
-    // Mostrar resultados
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
             viewModel.resetStates()
@@ -129,37 +126,31 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
             containerColor = DarkGray,
             contentColor = Gold,
             indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
+                TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                     height = 3.dp,
                     color = Gold
                 )
-            }
-        ) {
+            }) {
             tabs.forEachIndexed { index, title ->
                 val count = when (index) {
                     0 -> todayAppointments.size
                     1 -> upcomingAppointments.size
                     else -> pastAppointments.size
                 }
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = {
-                        Text(
-                            text = "$title ($count)",
-                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == index) Gold else TextGray
-                        )
-                    }
-                )
+                Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = {
+                    Text(
+                        text = "$title ($count)",
+                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                        color = if (selectedTab == index) Gold else TextGray
+                    )
+                })
             }
         }
 
         if (isLoading && appointments.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = Gold)
             }
@@ -172,9 +163,7 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Error",
-                    color = RedCancel,
-                    fontSize = 16.sp
+                    text = "Error", color = RedCancel, fontSize = 16.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -186,7 +175,9 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { viewModel.loadAppointments(stylistId) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = CarbonBlack)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Gold, contentColor = CarbonBlack
+                    )
                 ) {
                     Text("Reintentar")
                 }
@@ -211,9 +202,7 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
                         0 -> "No hay citas para hoy"
                         1 -> "No hay citas próximas"
                         else -> "No hay citas pasadas"
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = TextGray
+                    }, style = MaterialTheme.typography.bodyLarge, color = TextGray
                 )
             }
         } else {
@@ -221,8 +210,7 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 currentList.forEach { appointment ->
                     AdminAppointmentCard(
@@ -239,15 +227,13 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
                         onCompleteClick = {
                             targetAppointment = appointment
                             showCompleteDialog = true
-                        }
-                    )
+                        })
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 
-    // Diálogo confirmar
     if (showConfirmDialog && targetAppointment != null) {
         val appt = targetAppointment!!
         AlertDialog(
@@ -263,20 +249,18 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
                         viewModel.confirmAppointment(appt.id)
                         showConfirmDialog = false
                         targetAppointment = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = GreenConfirmed, contentColor = White),
-                    shape = RoundedCornerShape(8.dp)
+                    }, colors = ButtonDefaults.buttonColors(
+                        containerColor = GreenConfirmed, contentColor = White
+                    ), shape = RoundedCornerShape(8.dp)
                 ) { Text("Confirmar") }
             },
             dismissButton = {
                 TextButton(onClick = { showConfirmDialog = false; targetAppointment = null }) {
                     Text("Volver", color = Gold)
                 }
-            }
-        )
+            })
     }
 
-    // Diálogo cancelar
     if (showCancelDialog && targetAppointment != null) {
         val appt = targetAppointment!!
         AlertDialog(
@@ -292,20 +276,18 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
                         viewModel.cancelAppointment(appt.id)
                         showCancelDialog = false
                         targetAppointment = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = RedCancel, contentColor = White),
-                    shape = RoundedCornerShape(8.dp)
+                    }, colors = ButtonDefaults.buttonColors(
+                        containerColor = RedCancel, contentColor = White
+                    ), shape = RoundedCornerShape(8.dp)
                 ) { Text("Sí, cancelar") }
             },
             dismissButton = {
                 TextButton(onClick = { showCancelDialog = false; targetAppointment = null }) {
                     Text("No, volver", color = Gold)
                 }
-            }
-        )
+            })
     }
 
-    // Diálogo completar
     if (showCompleteDialog && targetAppointment != null) {
         val appt = targetAppointment!!
         AlertDialog(
@@ -321,17 +303,16 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
                         viewModel.completeAppointment(appt.id)
                         showCompleteDialog = false
                         targetAppointment = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = BlueCompleted, contentColor = White),
-                    shape = RoundedCornerShape(8.dp)
+                    }, colors = ButtonDefaults.buttonColors(
+                        containerColor = BlueCompleted, contentColor = White
+                    ), shape = RoundedCornerShape(8.dp)
                 ) { Text("Completar") }
             },
             dismissButton = {
                 TextButton(onClick = { showCompleteDialog = false; targetAppointment = null }) {
                     Text("Volver", color = Gold)
                 }
-            }
-        )
+            })
     }
 }
 
@@ -438,7 +419,6 @@ private fun AdminAppointmentCard(
                 }
             }
 
-            // Botones de acción solo para pendientes
             if (appointment.isPending) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -460,8 +440,7 @@ private fun AdminAppointmentCard(
                         onClick = onCancelClick,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = RedCancel.copy(alpha = 0.12f),
-                            contentColor = RedCancel
+                            containerColor = RedCancel.copy(alpha = 0.12f), contentColor = RedCancel
                         ),
                         shape = RoundedCornerShape(10.dp),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
@@ -472,7 +451,6 @@ private fun AdminAppointmentCard(
                     }
                 }
             } else if (appointment.isConfirmed) {
-                // Botón para completar
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = onCompleteClick,

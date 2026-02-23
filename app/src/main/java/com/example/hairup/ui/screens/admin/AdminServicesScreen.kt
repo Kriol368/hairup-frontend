@@ -32,6 +32,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -149,17 +150,13 @@ fun AdminServicesScreen() {
                 }
             } else {
                 services.forEach { service ->
-                    ServiceCard(
-                        service = service,
-                        onEdit = {
-                            editingService = service
-                            showDialog = true
-                        },
-                        onDelete = {
-                            serviceToDelete = service
-                            showDeleteDialog = true
-                        }
-                    )
+                    ServiceCard(service = service, onEdit = {
+                        editingService = service
+                        showDialog = true
+                    }, onDelete = {
+                        serviceToDelete = service
+                        showDeleteDialog = true
+                    })
                     Spacer(modifier = Modifier.height(10.dp))
                 }
             }
@@ -182,13 +179,10 @@ fun AdminServicesScreen() {
         }
 
         SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter)
         ) { data ->
             Snackbar(
-                containerColor = DarkGray,
-                contentColor = White,
-                snackbarData = data
+                containerColor = DarkGray, contentColor = White, snackbarData = data
             )
         }
     }
@@ -218,8 +212,7 @@ fun AdminServicesScreen() {
                 }
                 showDialog = false
                 editingService = null
-            }
-        )
+            })
     }
 
     if (showDeleteDialog && serviceToDelete != null) {
@@ -237,28 +230,22 @@ fun AdminServicesScreen() {
                         viewModel.deleteService(svc.id)
                         showDeleteDialog = false
                         serviceToDelete = null
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = RedCancel,
-                        contentColor = White
-                    ),
-                    shape = RoundedCornerShape(8.dp)
+                    }, colors = ButtonDefaults.buttonColors(
+                        containerColor = RedCancel, contentColor = White
+                    ), shape = RoundedCornerShape(8.dp)
                 ) { Text("Eliminar") }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false; serviceToDelete = null }) {
                     Text("Cancelar", color = Gold)
                 }
-            }
-        )
+            })
     }
 }
 
 @Composable
 private fun ServiceCard(
-    service: Service,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+    service: Service, onEdit: () -> Unit, onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -266,7 +253,6 @@ private fun ServiceCard(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        // Barra superior degradada dorada
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -282,8 +268,7 @@ private fun ServiceCard(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(Gold.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+                        .background(Gold.copy(alpha = 0.15f)), contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCut,
@@ -349,15 +334,27 @@ private fun ServiceCard(
                     label = "Duración",
                     value = "${service.duration} min",
                     valueColor = BlueAccent,
-                    icon = { Icon(Icons.Default.Timer, null, tint = BlueAccent, modifier = Modifier.size(13.dp)) }
-                )
+                    icon = {
+                        Icon(
+                            Icons.Default.Timer,
+                            null,
+                            tint = BlueAccent,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    })
                 InfoChip(
                     modifier = Modifier.weight(1f),
                     label = "XP",
                     value = "+${service.xp} XP",
                     valueColor = GoldLight,
-                    icon = { Icon(Icons.Default.Star, null, tint = GoldLight, modifier = Modifier.size(13.dp)) }
-                )
+                    icon = {
+                        Icon(
+                            Icons.Default.Star,
+                            null,
+                            tint = GoldLight,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    })
             }
         }
     }
@@ -440,7 +437,6 @@ private fun ServiceDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Nombre
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; nameError = false },
@@ -451,10 +447,8 @@ private fun ServiceDialog(
                     colors = fieldColors,
                     supportingText = if (nameError) {
                         { Text("El nombre es obligatorio", color = RedCancel) }
-                    } else null
-                )
+                    } else null)
 
-                // Descripción
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -464,7 +458,6 @@ private fun ServiceDialog(
                     colors = fieldColors
                 )
 
-                // Precio y Duración en fila
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = priceText,
@@ -477,8 +470,7 @@ private fun ServiceDialog(
                         colors = fieldColors,
                         supportingText = if (priceError) {
                             { Text("Inválido", color = RedCancel) }
-                        } else null
-                    )
+                        } else null)
                     OutlinedTextField(
                         value = durationText,
                         onValueChange = { durationText = it; durationError = false },
@@ -490,11 +482,9 @@ private fun ServiceDialog(
                         colors = fieldColors,
                         supportingText = if (durationError) {
                             { Text("Inválido", color = RedCancel) }
-                        } else null
-                    )
+                        } else null)
                 }
 
-                // XP
                 OutlinedTextField(
                     value = xpText,
                     onValueChange = { xpText = it },
@@ -504,9 +494,13 @@ private fun ServiceDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors,
                     leadingIcon = {
-                        Icon(Icons.Default.Star, null, tint = GoldLight, modifier = Modifier.size(18.dp))
-                    }
-                )
+                        Icon(
+                            Icons.Default.Star,
+                            null,
+                            tint = GoldLight,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    })
             }
         },
         confirmButton = {
@@ -523,25 +517,17 @@ private fun ServiceDialog(
 
                     if (!nameError && !priceError && !durationError) {
                         onSave(
-                            trimmedName,
-                            description.trim(),
-                            price!!,
-                            duration!!,
-                            xp
+                            trimmedName, description.trim(), price!!, duration!!, xp
                         )
                     }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Gold,
-                    contentColor = CarbonBlack
-                ),
-                shape = RoundedCornerShape(8.dp)
+                }, colors = ButtonDefaults.buttonColors(
+                    containerColor = Gold, contentColor = CarbonBlack
+                ), shape = RoundedCornerShape(8.dp)
             ) { Text("Guardar", fontWeight = FontWeight.Bold) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancelar", color = TextGray)
             }
-        }
-    )
+        })
 }

@@ -1,7 +1,6 @@
 package com.example.hairup.model
 
 import androidx.compose.ui.graphics.Color
-import java.time.LocalDate
 
 data class AdminAppointment(
     val id: Int,
@@ -16,8 +15,6 @@ data class AdminAppointment(
     val price: Double,
     val duration: Int
 ) {
-    val isToday: Boolean
-        get() = date == LocalDate.now().toString()
 
     val dateLabel: String
         get() {
@@ -26,7 +23,7 @@ data class AdminAppointment(
         }
 
     val timeLabel: String
-        get() = if (time.length >= 5) time.substring(0, 5) else time
+        get() = if (time.length >= 5) time.take(5) else time
 
     val statusText: String
         get() = when (status) {
@@ -48,6 +45,4 @@ data class AdminAppointment(
 
     val isPending: Boolean get() = status == 0
     val isConfirmed: Boolean get() = status == 1
-    val isCompleted: Boolean get() = status == 2
-    val isCancelled: Boolean get() = status == 3
 }

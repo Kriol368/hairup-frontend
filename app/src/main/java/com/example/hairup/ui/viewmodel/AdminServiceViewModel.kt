@@ -3,7 +3,6 @@ package com.example.hairup.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hairup.api.models.CreateServiceRequest
-import com.example.hairup.api.models.ServiceResponse
 import com.example.hairup.api.models.UpdateServiceRequest
 import com.example.hairup.data.SessionManager
 import com.example.hairup.data.repository.AdminServiceRepository
@@ -49,26 +48,19 @@ class AdminServiceViewModel(
 
         bookingRepository.getServices(token) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { serviceResponses ->
-                        _services.value = serviceResponses.map { it.toService() }
-                        _isLoading.value = false
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al cargar servicios"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { serviceResponses ->
+                    _services.value = serviceResponses.map { it.toService() }
+                    _isLoading.value = false
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al cargar servicios"
+                    _isLoading.value = false
+                })
             }
         }
     }
 
     fun createService(
-        name: String,
-        description: String,
-        price: Double,
-        duration: Int,
-        xp: Int
+        name: String, description: String, price: Double, duration: Int, xp: Int
     ) {
         val token = sessionManager.getToken()
         if (token.isNullOrEmpty()) {
@@ -89,28 +81,20 @@ class AdminServiceViewModel(
 
         adminRepository.createService(token, request) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { response ->
-                        _successMessage.value = response["message"] as? String ?: "Servicio creado"
-                        _operationSuccess.value = true
-                        loadServices()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al crear servicio"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { response ->
+                    _successMessage.value = response["message"] as? String ?: "Servicio creado"
+                    _operationSuccess.value = true
+                    loadServices()
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al crear servicio"
+                    _isLoading.value = false
+                })
             }
         }
     }
 
     fun updateService(
-        serviceId: Int,
-        name: String,
-        description: String,
-        price: Double,
-        duration: Int,
-        xp: Int
+        serviceId: Int, name: String, description: String, price: Double, duration: Int, xp: Int
     ) {
         val token = sessionManager.getToken()
         if (token.isNullOrEmpty()) {
@@ -131,17 +115,14 @@ class AdminServiceViewModel(
 
         adminRepository.updateService(token, serviceId, request) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { response ->
-                        _successMessage.value = response["message"] as? String ?: "Servicio actualizado"
-                        _operationSuccess.value = true
-                        loadServices()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al actualizar servicio"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { response ->
+                    _successMessage.value = response["message"] as? String ?: "Servicio actualizado"
+                    _operationSuccess.value = true
+                    loadServices()
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al actualizar servicio"
+                    _isLoading.value = false
+                })
             }
         }
     }
@@ -158,17 +139,14 @@ class AdminServiceViewModel(
 
         adminRepository.deleteService(token, serviceId) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { response ->
-                        _successMessage.value = response["message"] as? String ?: "Servicio eliminado"
-                        _operationSuccess.value = true
-                        loadServices()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al eliminar servicio"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { response ->
+                    _successMessage.value = response["message"] as? String ?: "Servicio eliminado"
+                    _operationSuccess.value = true
+                    loadServices()
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al eliminar servicio"
+                    _isLoading.value = false
+                })
             }
         }
     }

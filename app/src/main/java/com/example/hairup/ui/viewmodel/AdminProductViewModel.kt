@@ -53,16 +53,13 @@ class AdminProductViewModel(
 
         shopRepository.getProducts(token) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { productResponses ->
-                        _products.value = productResponses.map { it.toProduct() }
-                        _isLoading.value = false
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al cargar productos"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { productResponses ->
+                    _products.value = productResponses.map { it.toProduct() }
+                    _isLoading.value = false
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al cargar productos"
+                    _isLoading.value = false
+                })
             }
         }
     }
@@ -73,14 +70,11 @@ class AdminProductViewModel(
 
         shopRepository.getCategories(token) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { categoryResponses ->
-                        _categories.value = categoryResponses.map { it.id to it.name }
-                    },
-                    onFailure = {
-                        _categories.value = emptyList()
-                    }
-                )
+                result.fold(onSuccess = { categoryResponses ->
+                    _categories.value = categoryResponses.map { it.id to it.name }
+                }, onFailure = {
+                    _categories.value = emptyList()
+                })
             }
         }
     }
@@ -96,25 +90,21 @@ class AdminProductViewModel(
 
         val request = CreateCategoryRequest(name)
 
-        // Usar el repositorio de shop para crear categoría
-        // Necesitarías añadir este método a ShopRepository
+
         shopRepository.createCategory(token, request) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { response ->
-                        if (response.success) {
-                            _successMessage.value = response.message
-                            loadCategories() // Recargar categorías
-                        } else {
-                            _errorMessage.value = response.message
-                        }
-                        _isLoading.value = false
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al crear categoría"
-                        _isLoading.value = false
+                result.fold(onSuccess = { response ->
+                    if (response.success) {
+                        _successMessage.value = response.message
+                        loadCategories()
+                    } else {
+                        _errorMessage.value = response.message
                     }
-                )
+                    _isLoading.value = false
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al crear categoría"
+                    _isLoading.value = false
+                })
             }
         }
     }
@@ -149,18 +139,15 @@ class AdminProductViewModel(
 
         adminRepository.createProduct(token, request) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { response ->
-                        _successMessage.value = response["message"] as? String ?: "Producto creado"
-                        _operationSuccess.value = true
-                        loadProducts()
-                        loadCategories()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al crear producto"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { response ->
+                    _successMessage.value = response["message"] as? String ?: "Producto creado"
+                    _operationSuccess.value = true
+                    loadProducts()
+                    loadCategories()
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al crear producto"
+                    _isLoading.value = false
+                })
             }
         }
     }
@@ -196,17 +183,14 @@ class AdminProductViewModel(
 
         adminRepository.updateProduct(token, productId, request) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { response ->
-                        _successMessage.value = response["message"] as? String ?: "Producto actualizado"
-                        _operationSuccess.value = true
-                        loadProducts()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al actualizar producto"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { response ->
+                    _successMessage.value = response["message"] as? String ?: "Producto actualizado"
+                    _operationSuccess.value = true
+                    loadProducts()
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al actualizar producto"
+                    _isLoading.value = false
+                })
             }
         }
     }
@@ -223,17 +207,14 @@ class AdminProductViewModel(
 
         adminRepository.deleteProduct(token, productId) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { response ->
-                        _successMessage.value = response["message"] as? String ?: "Producto eliminado"
-                        _operationSuccess.value = true
-                        loadProducts()
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al eliminar producto"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { response ->
+                    _successMessage.value = response["message"] as? String ?: "Producto eliminado"
+                    _operationSuccess.value = true
+                    loadProducts()
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al eliminar producto"
+                    _isLoading.value = false
+                })
             }
         }
     }

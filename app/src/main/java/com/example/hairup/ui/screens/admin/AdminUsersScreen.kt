@@ -101,7 +101,6 @@ fun AdminUsersScreen() {
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Mostrar errores
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -109,7 +108,6 @@ fun AdminUsersScreen() {
         }
     }
 
-    // Mostrar éxito
     LaunchedEffect(operationSuccess) {
         if (operationSuccess) {
             successMessage?.let {
@@ -127,8 +125,7 @@ fun AdminUsersScreen() {
         "Todos" to users.size,
         "Clientes" to users.count { !it.isAdmin },
         "Admins" to users.count { it.isAdmin },
-        "Deshabilitados" to users.count { !it.isActive }
-    )
+        "Deshabilitados" to users.count { !it.isActive })
 
     Column(
         modifier = Modifier
@@ -138,7 +135,6 @@ fun AdminUsersScreen() {
     ) {
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Título + contador
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -158,7 +154,6 @@ fun AdminUsersScreen() {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Barra de búsqueda
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -178,7 +173,6 @@ fun AdminUsersScreen() {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Chips de filtro
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -195,8 +189,7 @@ fun AdminUsersScreen() {
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) { selectedFilter = label }
-                        .padding(horizontal = 14.dp, vertical = 7.dp)
-                ) {
+                        .padding(horizontal = 14.dp, vertical = 7.dp)) {
                     Text(
                         text = "$label ($count)",
                         fontSize = 12.sp,
@@ -209,7 +202,6 @@ fun AdminUsersScreen() {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Lista de usuarios
         if (isLoading && users.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -242,8 +234,7 @@ fun AdminUsersScreen() {
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = if (searchQuery.isNotEmpty())
-                                    "No se encontraron usuarios con esa búsqueda"
+                                text = if (searchQuery.isNotEmpty()) "No se encontraron usuarios con esa búsqueda"
                                 else "No hay usuarios en esta categoría",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = TextGray
@@ -252,15 +243,11 @@ fun AdminUsersScreen() {
                     }
                 } else {
                     filteredUsers.forEach { user ->
-                        UserCard(
-                            user = user,
-                            onToggleAdmin = {
-                                pendingAction = UserAction.ToggleAdmin(user, !user.isAdmin)
-                            },
-                            onToggleActive = {
-                                pendingAction = UserAction.ToggleActive(user, !user.isActive)
-                            }
-                        )
+                        UserCard(user = user, onToggleAdmin = {
+                            pendingAction = UserAction.ToggleAdmin(user, !user.isAdmin)
+                        }, onToggleActive = {
+                            pendingAction = UserAction.ToggleActive(user, !user.isActive)
+                        })
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -268,19 +255,14 @@ fun AdminUsersScreen() {
         }
     }
 
-    // Snackbar
     SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = Modifier.padding(16.dp)
+        hostState = snackbarHostState, modifier = Modifier.padding(16.dp)
     ) { data ->
         Snackbar(
-            containerColor = DarkGray,
-            contentColor = White,
-            snackbarData = data
+            containerColor = DarkGray, contentColor = White, snackbarData = data
         )
     }
 
-    // Diálogo de confirmación
     pendingAction?.let { action ->
         val title: String
         val message: String
@@ -289,20 +271,20 @@ fun AdminUsersScreen() {
 
         when (action) {
             is UserAction.ToggleAdmin -> {
-                title = if (action.makeAdmin) "Dar privilegios de admin" else "Quitar privilegios de admin"
-                message = if (action.makeAdmin)
-                    "¿Dar privilegios de administrador a ${action.user.name}? Tendrá acceso completo al panel de admin."
-                else
-                    "¿Quitar los privilegios de administrador a ${action.user.name}? Pasará a ser un cliente normal."
+                title =
+                    if (action.makeAdmin) "Dar privilegios de admin" else "Quitar privilegios de admin"
+                message =
+                    if (action.makeAdmin) "¿Dar privilegios de administrador a ${action.user.name}? Tendrá acceso completo al panel de admin."
+                    else "¿Quitar los privilegios de administrador a ${action.user.name}? Pasará a ser un cliente normal."
                 confirmLabel = if (action.makeAdmin) "Sí, dar admin" else "Sí, quitar admin"
                 btnColor = if (action.makeAdmin) Gold else RedCancel
             }
+
             is UserAction.ToggleActive -> {
                 title = if (action.active) "Habilitar usuario" else "Deshabilitar usuario"
-                message = if (action.active)
-                    "¿Habilitar la cuenta de ${action.user.name}? Recuperará el acceso a la app."
-                else
-                    "¿Deshabilitar la cuenta de ${action.user.name}? No podrá acceder a la app."
+                message =
+                    if (action.active) "¿Habilitar la cuenta de ${action.user.name}? Recuperará el acceso a la app."
+                    else "¿Deshabilitar la cuenta de ${action.user.name}? No podrá acceder a la app."
                 confirmLabel = if (action.active) "Sí, habilitar" else "Sí, deshabilitar"
                 btnColor = if (action.active) GreenConfirmed else RedCancel
             }
@@ -324,33 +306,28 @@ fun AdminUsersScreen() {
                             is UserAction.ToggleAdmin -> {
                                 viewModel.toggleAdmin(action.user.id, action.makeAdmin)
                             }
+
                             is UserAction.ToggleActive -> {
                                 viewModel.toggleActive(action.user.id, action.active)
                             }
                         }
                         pendingAction = null
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = btnColor,
-                        contentColor = btnTextColor
-                    ),
-                    shape = RoundedCornerShape(8.dp)
+                    }, colors = ButtonDefaults.buttonColors(
+                        containerColor = btnColor, contentColor = btnTextColor
+                    ), shape = RoundedCornerShape(8.dp)
                 ) { Text(confirmLabel, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { pendingAction = null }) {
                     Text("Cancelar", color = TextGray)
                 }
-            }
-        )
+            })
     }
 }
 
 @Composable
 private fun UserCard(
-    user: AdminUser,
-    onToggleAdmin: () -> Unit,
-    onToggleActive: () -> Unit
+    user: AdminUser, onToggleAdmin: () -> Unit, onToggleActive: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -360,7 +337,6 @@ private fun UserCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // Fila superior: avatar + info + badges
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -394,7 +370,6 @@ private fun UserCard(
                     )
                 }
 
-                // Badges rol + estado
                 Column(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -404,7 +379,6 @@ private fun UserCard(
                 }
             }
 
-            // Info extra para clientes
             if (!user.isAdmin) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
@@ -456,9 +430,7 @@ private fun UserCard(
             Divider(color = White.copy(alpha = 0.06f))
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Acciones
             if (user.id == 1) {
-                // Admin principal — protegido
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -476,13 +448,14 @@ private fun UserCard(
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Botón dar/quitar admin
                     Button(
                         onClick = onToggleAdmin,
                         modifier = Modifier.weight(1f),
                         enabled = user.isActive,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (user.isAdmin) RedCancel.copy(alpha = 0.12f) else Gold.copy(alpha = 0.15f),
+                            containerColor = if (user.isAdmin) RedCancel.copy(alpha = 0.12f) else Gold.copy(
+                                alpha = 0.15f
+                            ),
                             contentColor = if (user.isAdmin) RedCancel else Gold,
                             disabledContainerColor = TextGray.copy(alpha = 0.1f),
                             disabledContentColor = TextGray
@@ -503,13 +476,13 @@ private fun UserCard(
                         )
                     }
 
-                    // Botón habilitar/deshabilitar
                     Button(
                         onClick = onToggleActive,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (user.isActive) RedCancel.copy(alpha = 0.12f) else GreenConfirmed.copy(alpha = 0.15f),
-                            contentColor = if (user.isActive) RedCancel else GreenConfirmed
+                            containerColor = if (user.isActive) RedCancel.copy(alpha = 0.12f) else GreenConfirmed.copy(
+                                alpha = 0.15f
+                            ), contentColor = if (user.isActive) RedCancel else GreenConfirmed
                         ),
                         shape = RoundedCornerShape(10.dp),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)

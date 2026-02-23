@@ -2,15 +2,13 @@ package com.example.hairup.api.models
 
 import com.example.hairup.model.AdminAppointment
 import com.example.hairup.model.AdminUser
-import com.example.hairup.model.Level
 import com.example.hairup.model.MiniAppointment
 import com.example.hairup.model.Product
 import com.example.hairup.model.User
 import com.google.gson.annotations.SerializedName
 
 data class LoginResponse(
-    val token: String,
-    val user: UserResponse
+    val token: String, val user: UserResponse
 )
 
 data class UserResponse(
@@ -49,18 +47,8 @@ data class AppointmentResponse(
     val price: Double,
     val duration: Int,
     val xpEarned: Int
-) {
-    fun toBooking(): com.example.hairup.model.Booking {
-        return com.example.hairup.model.Booking(
-            id = id,
-            serviceId = serviceId,
-            date = date,
-            time = time,
-            userId = 0,
-            status = status
-        )
-    }
-}
+)
+
 data class LevelResponse(
     val id: Int,
     val name: String,
@@ -101,6 +89,7 @@ data class ProductResponse(
 data class ProductsResponse(
     val data: List<ProductResponse>
 )
+
 data class AppointmentsResponse(
     val data: List<AppointmentResponse>
 )
@@ -130,10 +119,7 @@ data class ServicesResponse(
 )
 
 data class BarberResponse(
-    val id: Int,
-    val name: String,
-    val email: String,
-    val phone: String?
+    val id: Int, val name: String, val email: String, val phone: String?
 )
 
 data class BarbersResponse(
@@ -149,10 +135,7 @@ data class TimeSlot(
 )
 
 data class AvailabilityResponse(
-    val barberId: Int,
-    val barberName: String,
-    val date: String,
-    val availableSlots: List<TimeSlot>
+    val barberId: Int, val barberName: String, val date: String, val availableSlots: List<TimeSlot>
 )
 
 data class RewardResponse(
@@ -170,14 +153,11 @@ data class RewardsResponse(
 
 
 data class RedeemResponse(
-    val success: Boolean,
-    val message: String,
-    val newPoints: Int?
+    val success: Boolean, val message: String, val newPoints: Int?
 )
 
 data class CategoryResponse(
-    val id: Int,
-    val name: String
+    val id: Int, val name: String
 )
 
 data class CategoriesResponse(
@@ -275,7 +255,7 @@ data class UserAdminResponse(
     val admin: Boolean,
     val levelId: Int,
     val created: String,
-    val active: Boolean? = true  // Por si el backend lo incluye
+    val active: Boolean? = true
 ) {
     fun toAdminUser(): AdminUser = AdminUser(
         id = id,
@@ -288,7 +268,7 @@ data class UserAdminResponse(
         levelId = levelId,
         level = getLevelName(levelId),
         isActive = active ?: true,
-        totalBookings = 0  // Se cargará aparte
+        totalBookings = 0
     )
 
     private fun getLevelName(levelId: Int): String {
@@ -304,7 +284,5 @@ data class UserAdminResponse(
 }
 
 data class CategorySuccessResponse(
-    val success: Boolean,
-    val message: String,
-    val id: Int? = null
+    val success: Boolean, val message: String, val id: Int? = null
 )

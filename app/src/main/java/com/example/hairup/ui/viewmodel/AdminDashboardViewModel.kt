@@ -8,8 +8,6 @@ import com.example.hairup.model.MiniAppointment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 class AdminDashboardViewModel(
     private val sessionManager: SessionManager,
@@ -50,12 +48,6 @@ class AdminDashboardViewModel(
     private val _isGenericAdmin = MutableStateFlow(false)
     val isGenericAdmin: StateFlow<Boolean> = _isGenericAdmin
 
-    private val todayDate: String
-        get() {
-            val dateFormat = SimpleDateFormat("EEEE, dd MMM yyyy", Locale("es", "ES"))
-            return dateFormat.format(Date()).replaceFirstChar { it.uppercase() }
-        }
-
     init {
         loadUserData()
         loadDashboardStats()
@@ -65,9 +57,9 @@ class AdminDashboardViewModel(
         val user = sessionManager.getUser()
         if (user != null) {
             _stylistName.value = user.name
-            // Determinar si es admin general (puedes ajustar esta lógica)
             _isGenericAdmin.value = user.isAdmin && user.id == 1
-            _stylistSpecialty.value = if (_isGenericAdmin.value) "Administrador general" else "Peluquero/a"
+            _stylistSpecialty.value =
+                if (_isGenericAdmin.value) "Administrador general" else "Peluquero/a"
         }
     }
 
@@ -82,21 +74,19 @@ class AdminDashboardViewModel(
 
         repository.getDashboardStats(token) { result ->
             viewModelScope.launch {
-                result.fold(
-                    onSuccess = { stats ->
-                        _totalToday.value = stats.totalToday
-                        _pendingToday.value = stats.pendingToday
-                        _confirmedToday.value = stats.confirmedToday
-                        _totalStylists.value = stats.totalStylists
-                        _activeStylists.value = stats.activeStylists
-                        _todayAppointments.value = stats.todayAppointments.map { it.toMiniAppointment() }
-                        _isLoading.value = false
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = exception.message ?: "Error al cargar estadísticas"
-                        _isLoading.value = false
-                    }
-                )
+                result.fold(onSuccess = { stats ->
+                    _totalToday.value = stats.totalToday
+                    _pendingToday.value = stats.pendingToday
+                    _confirmedToday.value = stats.confirmedToday
+                    _totalStylists.value = stats.totalStylists
+                    _activeStylists.value = stats.activeStylists
+                    _todayAppointments.value =
+                        stats.todayAppointments.map { it.toMiniAppointment() }
+                    _isLoading.value = false
+                }, onFailure = { exception ->
+                    _errorMessage.value = exception.message ?: "Error al cargar estadísticas"
+                    _isLoading.value = false
+                })
             }
         }
     }

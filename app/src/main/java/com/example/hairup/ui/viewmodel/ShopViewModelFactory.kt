@@ -8,8 +8,7 @@ class ShopViewModelFactory(private val sessionManager: SessionManager) : ViewMod
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ShopViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return ShopViewModel(sessionManager) as T
+            @Suppress("UNCHECKED_CAST") return ShopViewModel(sessionManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
