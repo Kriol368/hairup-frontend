@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Dashboard
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.ShoppingBag
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -64,6 +66,7 @@ val clientBottomBarItems = listOf(
     BottomBarItem("Inicio", Icons.Rounded.Home, Icons.Outlined.Home),
     BottomBarItem("Citas", Icons.Rounded.CalendarMonth, Icons.Outlined.CalendarMonth),
     BottomBarItem("Tienda", Icons.Rounded.ShoppingBag, Icons.Outlined.ShoppingBag),
+    BottomBarItem("Fidelidad", Icons.Rounded.Star, Icons.Outlined.Star),
     BottomBarItem("Perfil", Icons.Rounded.Person, Icons.Outlined.Person)
 )
 

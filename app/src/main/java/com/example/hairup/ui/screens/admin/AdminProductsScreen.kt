@@ -71,11 +71,11 @@ private val defaultCategories = listOf(
 )
 
 private val initialProducts = listOf(
-    Product(1, "Champú Reparador", "Reparación intensiva para cabello dañado", 25.0, "", true, "Champús"),
-    Product(2, "Acondicionador Premium", "Suavidad y brillo duradero", 20.0, "", true, "Acondicionadores"),
-    Product(3, "Mascarilla Hidratante", "Hidratación profunda en 5 minutos", 18.0, "", true, "Tratamientos"),
-    Product(4, "Sérum Capilar", "Tratamiento sin aclarado para puntas", 32.0, "", false, "Tratamientos"),
-    Product(5, "Spray Protector Térmico", "Protección hasta 230°C", 15.0, "", true, "Styling")
+    Product(1, "Champú Reparador", "Reparación intensiva para cabello dañado", 25.0, "", true, category = "Champús"),
+    Product(2, "Acondicionador Premium", "Suavidad y brillo duradero", 20.0, "", true, category = "Acondicionadores"),
+    Product(3, "Mascarilla Hidratante", "Hidratación profunda en 5 minutos", 18.0, "", true, category = "Tratamientos"),
+    Product(4, "Sérum Capilar", "Tratamiento sin aclarado para puntas", 32.0, "", false, category = "Tratamientos"),
+    Product(5, "Spray Protector Térmico", "Protección hasta 230°C", 15.0, "", true, category = "Styling")
 )
 
 @Composable
@@ -166,7 +166,7 @@ fun AdminProductsScreen() {
                     }
                 } else {
                     val newId = (products.maxOfOrNull { it.id } ?: 0) + 1
-                    products = products + Product(newId, name, description, price, imageUrl, true, category)
+                    products = products + Product(newId, name, description, price, imageUrl, true, category = category)
                 }
                 showDialog = false
                 editingProduct = null

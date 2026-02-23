@@ -21,21 +21,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hairup.model.Level
+import com.example.hairup.model.Reward
 import com.example.hairup.model.User
 import com.example.hairup.ui.components.LevelIcon
 import com.example.hairup.ui.components.getLevelColor
@@ -70,6 +65,7 @@ private val mockUser = User(
     email = "maria@example.com",
     name = "Maria Cliente",
     xp = 1250,
+    points = 650,
     levelId = 3
 )
 
@@ -80,29 +76,18 @@ private val allLevels = listOf(
     Level(id = 4, name = "Platino", required = 2000, reward = "Tratamiento premium gratis + 25% descuento")
 )
 
-private val mockAvailablePoints = 650
-
-private data class Reward(
-    val name: String,
-    val cost: Int,
-    val minLevelId: Int
-)
-
 private val allRewards = listOf(
-    Reward("Muestra de champu gratis", 100, 1),
-    Reward("5% descuento proxima cita", 150, 1),
-    Reward("Mascarilla capilar gratis", 250, 2),
-    Reward("10% descuento en tinte", 300, 2),
-    Reward("Corte gratis", 500, 3),
-    Reward("Tratamiento hidratante gratis", 400, 3),
-    Reward("Sesion completa gratis", 800, 4),
-    Reward("Pack productos premium", 700, 4)
+    Reward(id = 1, name = "Muestra de champu gratis", pointsCost = 100, minLevelId = 1),
+    Reward(id = 2, name = "5% descuento proxima cita", pointsCost = 150, minLevelId = 1),
+    Reward(id = 3, name = "Mascarilla capilar gratis", pointsCost = 250, minLevelId = 2),
+    Reward(id = 4, name = "10% descuento en tinte", pointsCost = 300, minLevelId = 2),
+    Reward(id = 5, name = "Corte gratis", pointsCost = 500, minLevelId = 3),
+    Reward(id = 6, name = "Tratamiento hidratante gratis", pointsCost = 400, minLevelId = 3),
+    Reward(id = 7, name = "Sesion completa gratis", pointsCost = 800, minLevelId = 4),
+    Reward(id = 8, name = "Pack productos premium", pointsCost = 700, minLevelId = 4)
 )
 
-private data class XpHistoryEntry(
-    val description: String,
-    val xp: Int
-)
+private data class XpHistoryEntry(val description: String, val xp: Int)
 
 private val xpHistory = listOf(
     XpHistoryEntry("Corte y Color", 50),
@@ -112,92 +97,63 @@ private val xpHistory = listOf(
     XpHistoryEntry("Mechas", 45)
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoyaltyScreen(onBack: () -> Unit) {
+fun LoyaltyScreen() {
     val currentLevel = allLevels.first { it.id == mockUser.levelId }
     val nextLevel = allLevels.firstOrNull { it.id == mockUser.levelId + 1 }
     val xpProgress = if (nextLevel != null && nextLevel.required > currentLevel.required) {
         (mockUser.xp - currentLevel.required).toFloat() / (nextLevel.required - currentLevel.required).toFloat()
     } else 1f
 
-    Scaffold(
-        containerColor = CarbonBlack,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Mi Fidelidad",
-                        fontWeight = FontWeight.Bold,
-                        color = Gold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Gold
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DarkGray
-                )
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .background(CarbonBlack)
-        ) {
-            // A) Header - Tu nivel actual
-            LevelHeader(
-                user = mockUser,
-                currentLevel = currentLevel,
-                nextLevel = nextLevel,
-                xpProgress = xpProgress
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .background(CarbonBlack)
+    ) {
+        // A) Header - Tu nivel actual
+        LevelHeader(
+            user = mockUser,
+            currentLevel = currentLevel,
+            nextLevel = nextLevel,
+            xpProgress = xpProgress
+        )
 
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            // B) Niveles y sus ventajas
-            SectionTitle("Niveles y Ventajas")
-            Spacer(modifier = Modifier.height(12.dp))
-            LevelCardsRow(
-                levels = allLevels,
-                currentLevelId = mockUser.levelId
-            )
+        // B) Niveles y sus ventajas
+        SectionTitle("Niveles y Ventajas")
+        Spacer(modifier = Modifier.height(12.dp))
+        LevelCardsRow(
+            levels = allLevels,
+            currentLevelId = mockUser.levelId
+        )
 
-            Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
-            // C) Recompensas disponibles
-            SectionTitle("Recompensas Disponibles")
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Tienes $mockAvailablePoints pts para canjear",
-                style = MaterialTheme.typography.bodyMedium,
-                color = GoldLight,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            RewardsSection(
-                currentLevelId = mockUser.levelId,
-                availablePoints = mockAvailablePoints
-            )
+        // C) Recompensas disponibles
+        SectionTitle("Recompensas Disponibles")
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Tienes ${mockUser.points} pts para canjear",
+            style = MaterialTheme.typography.bodyMedium,
+            color = GoldLight,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        RewardsSection(
+            currentLevelId = mockUser.levelId,
+            availablePoints = mockUser.points
+        )
 
-            Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
-            // D) Historial de XP
-            SectionTitle("Historial de XP")
-            Spacer(modifier = Modifier.height(12.dp))
-            XpHistorySection()
+        // D) Historial de XP
+        SectionTitle("Historial de XP")
+        Spacer(modifier = Modifier.height(12.dp))
+        XpHistorySection()
 
-            Spacer(modifier = Modifier.height(32.dp))
-        }
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -246,12 +202,7 @@ private fun LevelHeader(
                 .fillMaxWidth()
                 .padding(24.dp)
         ) {
-            // Large level badge - 64dp with glow
-            LevelIcon(
-                levelName = currentLevel.name,
-                size = 64.dp,
-                showGlow = true
-            )
+            LevelIcon(levelName = currentLevel.name, size = 64.dp, showGlow = true)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -272,7 +223,6 @@ private fun LevelHeader(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // XP
             Text(
                 text = "${user.xp} XP",
                 style = MaterialTheme.typography.displaySmall,
@@ -282,7 +232,6 @@ private fun LevelHeader(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Progress bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -296,9 +245,7 @@ private fun LevelHeader(
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(GoldDark, Gold, GoldLight)
-                            )
+                            Brush.horizontalGradient(colors = listOf(GoldDark, Gold, GoldLight))
                         )
                 )
             }
@@ -316,10 +263,7 @@ private fun LevelHeader(
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextGray
                     )
-                    LevelIcon(
-                        levelName = nextLevel.name,
-                        size = 18.dp
-                    )
+                    LevelIcon(levelName = nextLevel.name, size = 18.dp)
                 }
             } else {
                 Text(
@@ -335,10 +279,7 @@ private fun LevelHeader(
 
 // B) Level Cards (horizontal scroll)
 @Composable
-private fun LevelCardsRow(
-    levels: List<Level>,
-    currentLevelId: Int
-) {
+private fun LevelCardsRow(levels: List<Level>, currentLevelId: Int) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -352,41 +293,22 @@ private fun LevelCardsRow(
 }
 
 @Composable
-private fun LevelCard(
-    level: Level,
-    isUnlocked: Boolean,
-    isCurrent: Boolean
-) {
+private fun LevelCard(level: Level, isUnlocked: Boolean, isCurrent: Boolean) {
     Card(
         modifier = Modifier
             .width(170.dp)
-            .then(
-                if (isCurrent) Modifier.border(2.dp, Gold, RoundedCornerShape(16.dp))
-                else Modifier
-            )
-            .then(
-                if (!isUnlocked) Modifier.alpha(0.5f)
-                else Modifier
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCurrent) DarkSurface else DarkGray
-        ),
+            .then(if (isCurrent) Modifier.border(2.dp, Gold, RoundedCornerShape(16.dp)) else Modifier)
+            .then(if (!isUnlocked) Modifier.alpha(0.5f) else Modifier),
+        colors = CardDefaults.cardColors(containerColor = if (isCurrent) DarkSurface else DarkGray),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isCurrent) 8.dp else 2.dp
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isCurrent) 8.dp else 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Badge or lock - 48dp
             if (isUnlocked) {
-                LevelIcon(
-                    levelName = level.name,
-                    size = 48.dp,
-                    showGlow = isCurrent
-                )
+                LevelIcon(levelName = level.name, size = 48.dp, showGlow = isCurrent)
             } else {
                 Box(
                     modifier = Modifier
@@ -446,30 +368,20 @@ private fun LevelCard(
 
 // C) Rewards Section
 @Composable
-private fun RewardsSection(
-    currentLevelId: Int,
-    availablePoints: Int
-) {
+private fun RewardsSection(currentLevelId: Int, availablePoints: Int) {
     val unlockedRewards = allRewards.filter { it.minLevelId <= currentLevelId }
-
     Column(
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         unlockedRewards.forEach { reward ->
-            RewardCard(
-                reward = reward,
-                canAfford = availablePoints >= reward.cost
-            )
+            RewardCard(reward = reward, canAfford = availablePoints >= reward.pointsCost)
         }
     }
 }
 
 @Composable
-private fun RewardCard(
-    reward: Reward,
-    canAfford: Boolean
-) {
+private fun RewardCard(reward: Reward, canAfford: Boolean) {
     val levelName = allLevels.firstOrNull { it.id == reward.minLevelId }?.name ?: ""
 
     Card(
@@ -483,15 +395,10 @@ private fun RewardCard(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Level badge - 24dp in reward cards
-            LevelIcon(
-                levelName = levelName,
-                size = 36.dp
-            )
+            LevelIcon(levelName = levelName, size = 36.dp)
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = reward.name,
@@ -509,7 +416,7 @@ private fun RewardCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${reward.cost} pts",
+                        text = "${reward.pointsCost} pts",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold,
                         color = GoldLight
@@ -519,9 +426,8 @@ private fun RewardCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Redeem button
             Button(
-                onClick = { /* Canjear */ },
+                onClick = { /* Canjear - conectar a /api/rewards/redeem */ },
                 enabled = canAfford,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Gold,
@@ -549,9 +455,7 @@ private fun XpHistorySection() {
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        xpHistory.forEach { entry ->
-            XpHistoryItem(entry)
-        }
+        xpHistory.forEach { entry -> XpHistoryItem(entry) }
     }
 }
 

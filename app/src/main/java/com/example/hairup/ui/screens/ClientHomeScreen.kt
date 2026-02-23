@@ -46,6 +46,7 @@ import com.example.hairup.ui.components.HairUpBottomBar
 import com.example.hairup.ui.components.clientBottomBarItems
 import com.example.hairup.ui.screens.client.AppointmentsScreen
 import com.example.hairup.ui.screens.client.ClientDashboardContent
+import com.example.hairup.ui.screens.client.LoyaltyScreen
 import com.example.hairup.ui.screens.client.ProfileScreen
 import com.example.hairup.ui.screens.client.ShopScreen
 
@@ -56,7 +57,6 @@ private val Gold = Color(0xFFD4AF37)
 @Composable
 fun ClientHomeScreen(
     onNavigateToBooking: () -> Unit,
-    onNavigateToLoyalty: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     var selectedItem by remember { mutableStateOf(0) }
@@ -155,13 +155,14 @@ fun ClientHomeScreen(
                         onNewAppointment = onNavigateToBooking,
                         onNavigateToShop = { selectedItem = 2 },
                         onNavigateToAppointments = { selectedItem = 1 },
-                        onNavigateToLoyalty = onNavigateToLoyalty
+                        onNavigateToLoyalty = { selectedItem = 3 }
                     )
                     1 -> AppointmentsScreen(
                         onNavigateToBooking = onNavigateToBooking
                     )
                     2 -> ShopScreen()
-                    3 -> ProfileScreen(onLogout = onLogout)
+                    3 -> LoyaltyScreen()
+                    4 -> ProfileScreen(onLogout = onLogout)
                 }
             }
         }

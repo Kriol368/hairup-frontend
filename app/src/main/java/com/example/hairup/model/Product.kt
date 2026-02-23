@@ -7,5 +7,6 @@ data class Product(
     val price: Double = 0.0,
     val image: String = "",
     val available: Boolean = true,
+    val points: Int = 0,
     val category: String = ""
 )
