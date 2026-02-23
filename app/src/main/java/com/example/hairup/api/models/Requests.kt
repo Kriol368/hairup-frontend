@@ -52,3 +52,23 @@ data class PurchaseRequest(
 data class AddPointsRequest(
     val points: Int
 )
+
+data class CreateProductRequest(
+    val name: String,
+    val description: String? = null,
+    val price: Double,
+    val image: String? = null,
+    val available: Boolean = true,
+    val points: Int = 0,
+    val categoryId: Int? = null
+)
+
+data class UpdateProductRequest(
+    val name: String? = null,
+    val description: String? = null,
+    val price: Double? = null,
+    val image: String? = null,
+    val available: Boolean? = null,
+    val points: Int? = null,
+    val categoryId: Int? = null
+)

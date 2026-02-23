@@ -91,4 +91,23 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: AddPointsRequest
     ): Call<AddPointsResponse>
+
+    @POST("api/admin/products")
+    fun createProduct(
+        @Header("Authorization") token: String,
+        @Body request: CreateProductRequest
+    ): Call<Map<String, Any>>
+
+    @PUT("api/admin/products/{id}")
+    fun updateProduct(
+        @Header("Authorization") token: String,
+        @Path("id") productId: Int,
+        @Body request: UpdateProductRequest
+    ): Call<Map<String, Any>>
+
+    @DELETE("api/admin/products/{id}")
+    fun deleteProduct(
+        @Header("Authorization") token: String,
+        @Path("id") productId: Int
+    ): Call<Map<String, Any>>
 }

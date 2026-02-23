@@ -77,7 +77,8 @@ data class ProductResponse(
     val image: String?,
     val available: Boolean,
     val points: Int,
-    @SerializedName("categoryId") val categoryId: Int?  // ← IMPORTANTE: puede ser null
+    @SerializedName("categoryId") val categoryId: Int?,
+    @SerializedName("categoryName") val categoryName: String?
 ) {
     fun toProduct(): Product {
         return Product(
@@ -87,7 +88,9 @@ data class ProductResponse(
             price = price,
             image = image ?: "",
             available = available,
-            categoryId = categoryId ?: 0
+            points = points,
+            categoryId = categoryId ?: 0,
+            categoryName = categoryName ?: ""
         )
     }
 }
