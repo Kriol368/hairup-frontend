@@ -139,34 +139,47 @@ class ShopViewModel(
         _isLoading.value = true
         _purchaseResult.value = null
 
+        // Convertir cartItems a PurchaseItem
         val purchaseItems = _cartItems.value.map {
             PurchaseItem(productId = it.product.id, quantity = it.quantity)
         }
 
+        // Llamar al repositorio (que ahora usa el nuevo endpoint internamente)
         repository.purchaseProducts(token, purchaseItems) { result ->
             viewModelScope.launch {
                 result.fold(
                     onSuccess = { response ->
-                        // Actualizar usuario en SessionManager
-                        sessionManager.getUser()?.let { user ->
-                            val updatedUser = user.copy(
-                                xp = response.newXp,
-                                points = response.newPoints
+                        if (response.success) {
+                            // Actualizar usuario en SessionManager
+                            sessionManager.getUser()?.let { user ->
+                                val updatedUser = user.copy(
+                                    xp = response.newXp,
+                                    points = response.newPoints
+                                )
+                                sessionManager.saveAuthData(token, updatedUser)
+                            }
+
+                            _purchaseResult.value = PurchaseResult(
+                                success = true,
+                                message = response.message,
+                                xpEarned = response.xpEarned,
+                                pointsEarned = response.pointsEarned,
+                                newXp = response.newXp,
+                                newPoints = response.newPoints
                             )
-                            sessionManager.saveAuthData(token, updatedUser)
+
+                            // Vaciar carrito
+                            _cartItems.value = emptyList()
+                        } else {
+                            _purchaseResult.value = PurchaseResult(
+                                success = false,
+                                message = response.message,
+                                xpEarned = 0,
+                                pointsEarned = 0,
+                                newXp = 0,
+                                newPoints = 0
+                            )
                         }
-
-                        _purchaseResult.value = PurchaseResult(
-                            success = true,
-                            message = response.message,
-                            xpEarned = response.xpEarned,
-                            pointsEarned = response.pointsEarned,
-                            newXp = response.newXp,
-                            newPoints = response.newPoints
-                        )
-
-                        // Vaciar carrito
-                        _cartItems.value = emptyList()
                         _isLoading.value = false
                     },
                     onFailure = { exception ->

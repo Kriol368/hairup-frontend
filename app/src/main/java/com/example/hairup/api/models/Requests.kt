@@ -48,3 +48,7 @@ data class PurchaseItem(
 data class PurchaseRequest(
     val items: List<PurchaseItem>
 )
+
+data class AddPointsRequest(
+    val points: Int
+)

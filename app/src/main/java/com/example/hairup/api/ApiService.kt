@@ -86,9 +86,9 @@ interface ApiService {
     @GET("api/categories")
     fun getCategories(@Header("Authorization") token: String): Call<CategoriesResponse>
 
-    @POST("api/products/purchase")
-    fun purchaseProducts(
+    @POST("api/user/points/add")
+    fun addPoints(
         @Header("Authorization") token: String,
-        @Body request: PurchaseRequest
-    ): Call<PurchaseResponse>
+        @Body request: AddPointsRequest
+    ): Call<AddPointsResponse>
 }

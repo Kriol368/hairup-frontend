@@ -407,10 +407,6 @@ fun ShopScreen() {
             },
             text = {
                 Column {
-                    Text(
-                        text = purchaseResult!!.message,
-                        color = TextGray
-                    )
                     if (purchaseResult!!.success) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(

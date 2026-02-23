@@ -186,3 +186,12 @@ data class PurchaseResponse(
     val newXp: Int,
     val newPoints: Int
 )
+
+data class AddPointsResponse(
+    val success: Boolean,
+    val message: String,
+    val xpEarned: Int,
+    val pointsEarned: Int,
+    val newXp: Int,
+    val newPoints: Int
+)

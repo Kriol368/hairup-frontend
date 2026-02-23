@@ -62,24 +62,56 @@ class ShopRepository {
     ) {
         Log.d(TAG, "Realizando compra de ${items.size} productos")
 
-        val request = PurchaseRequest(items)
+        // Calcular puntos totales de los productos
+        var totalPoints = 0
 
-        RetrofitClient.apiService.purchaseProducts("Bearer $token", request).enqueue(object : Callback<PurchaseResponse> {
-            override fun onResponse(
-                call: Call<PurchaseResponse>,
-                response: Response<PurchaseResponse>
-            ) {
-                if (response.isSuccessful) {
-                    response.body()?.let { callback(Result.success(it)) }
-                        ?: callback(Result.failure(Exception("Respuesta vacía")))
-                } else {
-                    callback(Result.failure(Exception("Error ${response.code()}")))
+        // Primero obtenemos los productos para saber sus puntos
+        getProducts(token) { productsResult ->
+            productsResult.fold(
+                onSuccess = { products ->
+                    // Calcular puntos sumando (points * quantity) de cada item
+                    totalPoints = items.sumOf { item ->
+                        val product = products.find { it.id == item.productId }
+                        (product?.points ?: 0) * item.quantity
+                    }
+
+                    // Llamar al nuevo endpoint con los puntos totales
+                    val request = AddPointsRequest(totalPoints)
+                    RetrofitClient.apiService.addPoints("Bearer $token", request).enqueue(object : Callback<AddPointsResponse> {
+                        override fun onResponse(
+                            call: Call<AddPointsResponse>,
+                            response: Response<AddPointsResponse>
+                        ) {
+                            if (response.isSuccessful) {
+                                val body = response.body()
+                                if (body != null) {
+                                    // Convertir AddPointsResponse a PurchaseResponse
+                                    val purchaseResponse = PurchaseResponse(
+                                        success = body.success,
+                                        message = body.message,
+                                        xpEarned = body.xpEarned,
+                                        pointsEarned = body.pointsEarned,
+                                        newXp = body.newXp,
+                                        newPoints = body.newPoints
+                                    )
+                                    callback(Result.success(purchaseResponse))
+                                } else {
+                                    callback(Result.failure(Exception("Respuesta vacía")))
+                                }
+                            } else {
+                                callback(Result.failure(Exception("Error ${response.code()}")))
+                            }
+                        }
+
+                        override fun onFailure(call: Call<AddPointsResponse>, t: Throwable) {
+                            callback(Result.failure(t))
+                        }
+                    })
+                },
+                onFailure = { exception ->
+                    callback(Result.failure(exception))
                 }
-            }
-
-            override fun onFailure(call: Call<PurchaseResponse>, t: Throwable) {
-                callback(Result.failure(t))
-            }
-        })
+            )
+        }
     }
 }
