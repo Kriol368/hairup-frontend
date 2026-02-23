@@ -97,6 +97,7 @@ fun ProfileScreen(
     )
 
     val profileState by viewModel.profileState.collectAsState()
+    val appointmentsCount by viewModel.appointmentsCount.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
     val passwordState by viewModel.passwordState.collectAsState()
 
@@ -289,7 +290,7 @@ fun ProfileScreen(
                     ) {
                         StatItem(
                             icon = Icons.Default.CalendarMonth,
-                            value = "0",
+                            value = "$appointmentsCount",
                             label = "Citas"
                         )
                         Box(

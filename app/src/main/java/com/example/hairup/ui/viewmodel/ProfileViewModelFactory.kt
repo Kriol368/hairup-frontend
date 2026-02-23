@@ -3,13 +3,18 @@ package com.example.hairup.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.hairup.data.SessionManager
+import com.example.hairup.data.repository.AppointmentRepository
 
 class ProfileViewModelFactory(private val sessionManager: SessionManager) :
     ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ProfileViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST") return ProfileViewModel(sessionManager) as T
+            @Suppress("UNCHECKED_CAST")
+            return ProfileViewModel(
+                sessionManager,
+                appointmentRepository = AppointmentRepository()
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
