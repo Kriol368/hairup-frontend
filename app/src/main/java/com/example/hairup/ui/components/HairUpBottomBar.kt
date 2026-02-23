@@ -34,10 +34,9 @@ import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.ShoppingBag
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -56,9 +55,7 @@ private val GrayInactive = Color(0xFF8A8A8A)
 private val TopBorderGold = Color(0xFFDAA520)
 
 data class BottomBarItem(
-    val label: String,
-    val activeIcon: ImageVector,
-    val inactiveIcon: ImageVector
+    val label: String, val activeIcon: ImageVector, val inactiveIcon: ImageVector
 )
 
 // ===== Client tabs =====
@@ -131,10 +128,7 @@ fun HairUpBottomBar(
 
 @Composable
 private fun BottomBarTab(
-    item: BottomBarItem,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    item: BottomBarItem, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier
 ) {
     val iconColor by animateColorAsState(
         targetValue = if (isSelected) GoldActive else GrayInactive,
@@ -147,16 +141,14 @@ private fun BottomBarTab(
         label = "labelColor"
     )
 
+
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(
-                    bounded = true,
-                    color = GoldActive.copy(alpha = 0.3f)
-                ),
-                onClick = onClick
+                interactionSource = remember { MutableInteractionSource() }, indication = ripple(
+                    bounded = true, color = GoldActive.copy(alpha = 0.3f)
+                ), onClick = onClick
             )
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

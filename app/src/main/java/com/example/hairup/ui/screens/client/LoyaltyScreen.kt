@@ -2,6 +2,7 @@ package com.example.hairup.ui.screens.client
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,31 +22,47 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.hairup.data.SessionManager
 import com.example.hairup.model.Level
 import com.example.hairup.model.Reward
 import com.example.hairup.model.User
 import com.example.hairup.ui.components.LevelIcon
 import com.example.hairup.ui.components.getLevelColor
+import com.example.hairup.ui.viewmodel.RewardViewModel
+import com.example.hairup.ui.viewmodel.RewardViewModelFactory
 
 // Colores del tema
 private val CarbonBlack = Color(0xFF121212)
@@ -59,16 +76,7 @@ private val TextGray = Color(0xFFB0B0B0)
 private val White = Color(0xFFFFFFFF)
 private val GreenSuccess = Color(0xFF4CAF50)
 
-// Datos mockeados
-private val mockUser = User(
-    id = 1,
-    email = "maria@example.com",
-    name = "Maria Cliente",
-    xp = 1250,
-    points = 650,
-    levelId = 3
-)
-
+// Datos de niveles (mock temporal - vendrán del backend)
 private val allLevels = listOf(
     Level(id = 1, name = "Bronce", required = 0, reward = "5% descuento en productos"),
     Level(id = 2, name = "Plata", required = 500, reward = "10% descuento en servicios"),
@@ -76,84 +84,261 @@ private val allLevels = listOf(
     Level(id = 4, name = "Platino", required = 2000, reward = "Tratamiento premium gratis + 25% descuento")
 )
 
-private val allRewards = listOf(
-    Reward(id = 1, name = "Muestra de champu gratis", pointsCost = 100, minLevelId = 1),
-    Reward(id = 2, name = "5% descuento proxima cita", pointsCost = 150, minLevelId = 1),
-    Reward(id = 3, name = "Mascarilla capilar gratis", pointsCost = 250, minLevelId = 2),
-    Reward(id = 4, name = "10% descuento en tinte", pointsCost = 300, minLevelId = 2),
-    Reward(id = 5, name = "Corte gratis", pointsCost = 500, minLevelId = 3),
-    Reward(id = 6, name = "Tratamiento hidratante gratis", pointsCost = 400, minLevelId = 3),
-    Reward(id = 7, name = "Sesion completa gratis", pointsCost = 800, minLevelId = 4),
-    Reward(id = 8, name = "Pack productos premium", pointsCost = 700, minLevelId = 4)
-)
-
-private data class XpHistoryEntry(val description: String, val xp: Int)
-
-private val xpHistory = listOf(
-    XpHistoryEntry("Corte y Color", 50),
-    XpHistoryEntry("Compra champu reparador", 20),
-    XpHistoryEntry("Tinte completo", 60),
-    XpHistoryEntry("Compra acondicionador", 15),
-    XpHistoryEntry("Mechas", 45)
-)
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoyaltyScreen() {
-    val currentLevel = allLevels.first { it.id == mockUser.levelId }
-    val nextLevel = allLevels.firstOrNull { it.id == mockUser.levelId + 1 }
+fun LoyaltyScreen(
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val viewModel: RewardViewModel = viewModel(
+        factory = RewardViewModelFactory(sessionManager)
+    )
+
+    val rewards by viewModel.rewards.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val redeemResult by viewModel.redeemSuccess.collectAsState()
+    val userPoints by viewModel.userPoints.collectAsState()
+    val userLevelId by viewModel.userLevelId.collectAsState()
+
+    // Obtener usuario para nombre y XP
+    val currentUser = sessionManager.getUser()
+
+    var selectedRewardId by remember { mutableStateOf<Int?>(null) }
+    var showRedeemDialog by remember { mutableStateOf(false) }
+    var showResultDialog by remember { mutableStateOf(false) }
+
+    // Si no hay usuario, volver
+    if (currentUser == null) {
+        LaunchedEffect(Unit) {
+            onBack()
+        }
+        return
+    }
+
+    // Cargar recompensas al iniciar
+    LaunchedEffect(Unit) {
+        viewModel.loadRewards()
+    }
+
+    // Mostrar resultado de canje
+    LaunchedEffect(redeemResult) {
+        if (redeemResult != null) {
+            showResultDialog = true
+        }
+    }
+
+    val currentLevel = allLevels.firstOrNull { it.id == userLevelId } ?: allLevels.first()
+    val nextLevel = allLevels.firstOrNull { it.id == userLevelId + 1 }
     val xpProgress = if (nextLevel != null && nextLevel.required > currentLevel.required) {
-        (mockUser.xp - currentLevel.required).toFloat() / (nextLevel.required - currentLevel.required).toFloat()
+        (currentUser.xp - currentLevel.required).toFloat() / (nextLevel.required - currentLevel.required).toFloat()
     } else 1f
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .background(CarbonBlack)
-    ) {
-        // A) Header - Tu nivel actual
-        LevelHeader(
-            user = mockUser,
-            currentLevel = currentLevel,
-            nextLevel = nextLevel,
-            xpProgress = xpProgress
-        )
+    Scaffold(
+        containerColor = CarbonBlack,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Mi Fidelidad",
+                        fontWeight = FontWeight.Bold,
+                        color = Gold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = Gold
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = DarkGray
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .background(CarbonBlack)
+        ) {
+            // A) Header - Tu nivel actual
+            LevelHeader(
+                userName = currentUser.name,
+                userXp = currentUser.xp,
+                userPoints = userPoints,
+                currentLevel = currentLevel,
+                nextLevel = nextLevel,
+                xpProgress = xpProgress
+            )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // B) Niveles y sus ventajas
-        SectionTitle("Niveles y Ventajas")
-        Spacer(modifier = Modifier.height(12.dp))
-        LevelCardsRow(
-            levels = allLevels,
-            currentLevelId = mockUser.levelId
-        )
+            // B) Niveles y sus ventajas
+            SectionTitle("Niveles y Ventajas")
+            Spacer(modifier = Modifier.height(12.dp))
+            LevelCardsRow(
+                levels = allLevels,
+                currentLevelId = userLevelId
+            )
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // C) Recompensas disponibles
-        SectionTitle("Recompensas Disponibles")
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "Tienes ${mockUser.points} pts para canjear",
-            style = MaterialTheme.typography.bodyMedium,
-            color = GoldLight,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        RewardsSection(
-            currentLevelId = mockUser.levelId,
-            availablePoints = mockUser.points
-        )
+            // C) Recompensas disponibles
+            SectionTitle("Recompensas Disponibles")
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Tienes $userPoints pts para canjear",
+                style = MaterialTheme.typography.bodyMedium,
+                color = GoldLight,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
 
-        Spacer(modifier = Modifier.height(28.dp))
+            if (isLoading && rewards.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Gold)
+                }
+            } else {
+                RewardsSection(
+                    rewards = rewards,
+                    onRedeemClick = { rewardId ->
+                        selectedRewardId = rewardId
+                        showRedeemDialog = true
+                    }
+                )
+            }
 
-        // D) Historial de XP
-        SectionTitle("Historial de XP")
-        Spacer(modifier = Modifier.height(12.dp))
-        XpHistorySection()
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = Color(0xFFE53935),
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    // Diálogo de confirmación de canje
+    if (showRedeemDialog && selectedRewardId != null) {
+        val reward = rewards.find { it.id == selectedRewardId }
+        if (reward != null) {
+            AlertDialog(
+                onDismissRequest = { showRedeemDialog = false },
+                containerColor = DarkGray,
+                titleContentColor = White,
+                textContentColor = TextGray,
+                title = {
+                    Text(
+                        text = "Canjear recompensa",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column {
+                        Text(
+                            text = reward.name,
+                            fontWeight = FontWeight.Bold,
+                            color = Gold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(reward.description)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "¿Canjear por ${reward.pointsCost} puntos?",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showRedeemDialog = false
+                            viewModel.redeemReward(reward.id)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Gold,
+                            contentColor = CarbonBlack
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Sí, canjear")
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { showRedeemDialog = false },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DarkSurface,
+                            contentColor = TextGray
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
+    }
+
+    // Diálogo de resultado
+    if (showResultDialog && redeemResult != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showResultDialog = false
+                viewModel.resetRedeemSuccess()
+            },
+            containerColor = DarkGray,
+            titleContentColor = White,
+            icon = {
+                if (redeemResult!!.success) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        null,
+                        tint = GreenSuccess,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    text = if (redeemResult!!.success) "¡Canje exitoso!" else "Error",
+                    fontWeight = FontWeight.Bold,
+                    color = if (redeemResult!!.success) GreenSuccess else Color(0xFFE53935)
+                )
+            },
+            text = {
+                Text(redeemResult!!.message)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showResultDialog = false
+                        viewModel.resetRedeemSuccess()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Gold,
+                        contentColor = CarbonBlack
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Aceptar")
+                }
+            }
+        )
     }
 }
 
@@ -168,10 +353,12 @@ private fun SectionTitle(title: String) {
     )
 }
 
-// A) Level Header
+// A) Level Header (actualizado para recibir datos en lugar de User)
 @Composable
 private fun LevelHeader(
-    user: User,
+    userName: String,
+    userXp: Int,
+    userPoints: Int,
     currentLevel: Level,
     nextLevel: Level?,
     xpProgress: Float
@@ -202,7 +389,12 @@ private fun LevelHeader(
                 .fillMaxWidth()
                 .padding(24.dp)
         ) {
-            LevelIcon(levelName = currentLevel.name, size = 64.dp, showGlow = true)
+            // Large level badge
+            LevelIcon(
+                levelName = currentLevel.name,
+                size = 64.dp,
+                showGlow = true
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -216,21 +408,50 @@ private fun LevelHeader(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = user.name,
+                text = userName,
                 style = MaterialTheme.typography.bodyLarge,
                 color = TextGray
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text(
-                text = "${user.xp} XP",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                color = Gold
-            )
+            // XP y Points
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // XP
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$userXp",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Gold
+                    )
+                    Text(
+                        text = "XP total",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGray
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(14.dp))
+                // Points
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$userPoints",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = GoldLight
+                    )
+                    Text(
+                        text = "Puntos",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             Box(
                 modifier = Modifier
@@ -253,7 +474,7 @@ private fun LevelHeader(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (nextLevel != null) {
-                val remaining = nextLevel.required - user.xp
+                val remaining = nextLevel.required - userXp
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -267,7 +488,7 @@ private fun LevelHeader(
                 }
             } else {
                 Text(
-                    text = "Has alcanzado el nivel maximo!",
+                    text = "Has alcanzado el nivel máximo!",
                     style = MaterialTheme.typography.bodyMedium,
                     color = GoldLight,
                     textAlign = TextAlign.Center
@@ -307,6 +528,7 @@ private fun LevelCard(level: Level, isUnlocked: Boolean, isCurrent: Boolean) {
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Badge or lock
             if (isUnlocked) {
                 LevelIcon(levelName = level.name, size = 48.dp, showGlow = isCurrent)
             } else {
@@ -368,24 +590,57 @@ private fun LevelCard(level: Level, isUnlocked: Boolean, isCurrent: Boolean) {
 
 // C) Rewards Section
 @Composable
-private fun RewardsSection(currentLevelId: Int, availablePoints: Int) {
-    val unlockedRewards = allRewards.filter { it.minLevelId <= currentLevelId }
+private fun RewardsSection(
+    rewards: List<RewardViewModel.RewardItem>,
+    onRedeemClick: (Int) -> Unit
+) {
     Column(
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        unlockedRewards.forEach { reward ->
-            RewardCard(reward = reward, canAfford = availablePoints >= reward.pointsCost)
+        if (rewards.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No hay recompensas disponibles",
+                    color = TextGray,
+                    fontSize = 14.sp
+                )
+            }
+        } else {
+            rewards.forEach { reward ->
+                RewardCard(
+                    reward = reward,
+                    onRedeemClick = { onRedeemClick(reward.id) }
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun RewardCard(reward: Reward, canAfford: Boolean) {
-    val levelName = allLevels.firstOrNull { it.id == reward.minLevelId }?.name ?: ""
+private fun RewardCard(
+    reward: RewardViewModel.RewardItem,
+    onRedeemClick: () -> Unit
+) {
+    val levelName = when (reward.minLevelId) {
+        1 -> "Bronce"
+        2 -> "Plata"
+        3 -> "Oro"
+        4 -> "Platino"
+        else -> "Bronce"
+    }
+
+    val canRedeem = reward.canAfford && reward.hasRequiredLevel && reward.available
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkGray),
+        colors = CardDefaults.cardColors(
+            containerColor = if (canRedeem) DarkGray else DarkGray.copy(alpha = 0.7f)
+        ),
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -395,7 +650,11 @@ private fun RewardCard(reward: Reward, canAfford: Boolean) {
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            LevelIcon(levelName = levelName, size = 36.dp)
+            // Level badge
+            LevelIcon(
+                levelName = levelName,
+                size = 36.dp
+            )
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -404,9 +663,20 @@ private fun RewardCard(reward: Reward, canAfford: Boolean) {
                     text = reward.name,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = White
+                    color = if (reward.available) White else TextGray
                 )
+
+                if (!reward.hasRequiredLevel) {
+                    Text(
+                        text = "Requiere nivel $levelName",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFE53935).copy(alpha = 0.8f),
+                        fontSize = 11.sp
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(2.dp))
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Star,
@@ -427,8 +697,8 @@ private fun RewardCard(reward: Reward, canAfford: Boolean) {
             Spacer(modifier = Modifier.width(8.dp))
 
             Button(
-                onClick = { /* Canjear - conectar a /api/rewards/redeem */ },
-                enabled = canAfford,
+                onClick = onRedeemClick,
+                enabled = canRedeem,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Gold,
                     contentColor = CarbonBlack,
@@ -439,50 +709,11 @@ private fun RewardCard(reward: Reward, canAfford: Boolean) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
-                    text = "Canjear",
+                    text = if (canRedeem) "Canjear" else "No disponible",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
-        }
-    }
-}
-
-// D) XP History Section
-@Composable
-private fun XpHistorySection() {
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        xpHistory.forEach { entry -> XpHistoryItem(entry) }
-    }
-}
-
-@Composable
-private fun XpHistoryItem(entry: XpHistoryEntry) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = DarkGray),
-        shape = RoundedCornerShape(10.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = entry.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = White.copy(alpha = 0.9f)
-            )
-            Text(
-                text = "+${entry.xp} XP",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = GreenSuccess
-            )
         }
     }
 }

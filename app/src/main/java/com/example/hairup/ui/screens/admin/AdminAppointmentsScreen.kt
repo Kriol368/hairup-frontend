@@ -166,7 +166,43 @@ fun AdminAppointmentsScreen(stylistId: Int = 0) {
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
-        }
+        )
+    }
+
+    if (showCancelDialog && targetAppointment != null) {
+        val appt = targetAppointment!!
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false; targetAppointment = null },
+            containerColor = DarkGray,
+            titleContentColor = White,
+            textContentColor = TextGray,
+            title = { Text("Cancelar cita", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Cancelar la cita de ${appt.clientName}? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val id = appt.id
+                        if (selectedTab == 0) {
+                            todayList = todayList.filter { it.id != id }
+                        } else {
+                            upcomingList = upcomingList.filter { it.id != id }
+                        }
+                        showCancelDialog = false
+                        targetAppointment = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RedCancel,
+                        contentColor = White
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) { Text("Sí, cancelar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false; targetAppointment = null }) {
+                    Text("No, volver", color = Gold)
+                }
+            }
+        )
     }
 
     // Diálogo confirmar

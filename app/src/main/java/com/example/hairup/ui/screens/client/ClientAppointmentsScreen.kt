@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +43,8 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,10 +54,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.hairup.data.SessionManager
 import com.example.hairup.model.BookingStatus
+import com.example.hairup.ui.viewmodel.AppointmentViewModel
+import com.example.hairup.ui.viewmodel.AppointmentViewModelFactory
 
 // Theme colors
 private val CarbonBlack = Color(0xFF121212)
@@ -60,183 +70,116 @@ private val DarkGray = Color(0xFF1E1E1E)
 private val CardBg = Color(0xFF1A1A1A)
 private val Gold = Color(0xFFD4AF37)
 private val GoldLight = Color(0xFFE2C478)
-private val GoldDark = Color(0xFFA68829)
 private val TextGray = Color(0xFFB0B0B0)
 private val White = Color(0xFFFFFFFF)
 private val AmberYellow = Color(0xFFFFC107)
 private val GreenConfirmed = Color(0xFF4CAF50)
 private val RedCancel = Color(0xFFE53935)
 
-// Display data class for appointments (combines Booking + Service + stylist info)
-private data class AppointmentItem(
-    val id: Int,
-    val serviceName: String,
-    val date: String,
-    val dateFormatted: String,
-    val time: String,
-    val stylistName: String,
-    val status: BookingStatus,
-    val price: Double,
-    val duration: Int,
-    val xpEarned: Int = 0
-)
-
-// Mock data - Upcoming appointments
-private val mockUpcoming = listOf(
-    AppointmentItem(
-        id = 1,
-        serviceName = "Corte y Color",
-        date = "2026-02-20",
-        dateFormatted = "Viernes 20 Feb, 2026",
-        time = "10:00",
-        stylistName = "Ana García",
-        status = BookingStatus.CONFIRMED,
-        price = 45.0,
-        duration = 90
-    ),
-    AppointmentItem(
-        id = 2,
-        serviceName = "Corte de pelo",
-        date = "2026-02-25",
-        dateFormatted = "Miércoles 25 Feb, 2026",
-        time = "16:30",
-        stylistName = "Carlos López",
-        status = BookingStatus.PENDING,
-        price = 15.0,
-        duration = 30
-    ),
-    AppointmentItem(
-        id = 3,
-        serviceName = "Tratamiento capilar",
-        date = "2026-03-03",
-        dateFormatted = "Martes 3 Mar, 2026",
-        time = "12:00",
-        stylistName = "Laura Martín",
-        status = BookingStatus.PENDING,
-        price = 25.0,
-        duration = 45
-    )
-)
-
-// Mock data - History
-private val mockHistory = listOf(
-    AppointmentItem(
-        id = 4,
-        serviceName = "Corte de pelo",
-        date = "2026-02-05",
-        dateFormatted = "Jueves 5 Feb, 2026",
-        time = "11:00",
-        stylistName = "Diego Ruiz",
-        status = BookingStatus.COMPLETED,
-        price = 15.0,
-        duration = 30,
-        xpEarned = 25
-    ),
-    AppointmentItem(
-        id = 5,
-        serviceName = "Tinte",
-        date = "2026-01-28",
-        dateFormatted = "Miércoles 28 Ene, 2026",
-        time = "14:00",
-        stylistName = "Ana García",
-        status = BookingStatus.COMPLETED,
-        price = 35.0,
-        duration = 60,
-        xpEarned = 50
-    ),
-    AppointmentItem(
-        id = 6,
-        serviceName = "Corte y Barba",
-        date = "2026-01-20",
-        dateFormatted = "Martes 20 Ene, 2026",
-        time = "17:30",
-        stylistName = "Carlos López",
-        status = BookingStatus.COMPLETED,
-        price = 22.0,
-        duration = 40,
-        xpEarned = 40
-    ),
-    AppointmentItem(
-        id = 7,
-        serviceName = "Alisado",
-        date = "2026-01-15",
-        dateFormatted = "Jueves 15 Ene, 2026",
-        time = "10:00",
-        stylistName = "Laura Martín",
-        status = BookingStatus.CANCELLED,
-        price = 40.0,
-        duration = 90
-    ),
-    AppointmentItem(
-        id = 8,
-        serviceName = "Corte de pelo",
-        date = "2026-01-03",
-        dateFormatted = "Sábado 3 Ene, 2026",
-        time = "9:30",
-        stylistName = "Diego Ruiz",
-        status = BookingStatus.COMPLETED,
-        price = 15.0,
-        duration = 30,
-        xpEarned = 25
-    )
-)
-
 @Composable
 fun AppointmentsScreen(
     onNavigateToBooking: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val viewModel: AppointmentViewModel = viewModel(
+        factory = AppointmentViewModelFactory(sessionManager)
+    )
+
+    val upcoming by viewModel.upcomingAppointments.collectAsState()
+    val past by viewModel.pastAppointments.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val cancelSuccess by viewModel.cancelSuccess.collectAsState()
+
     var selectedTab by remember { mutableStateOf(0) }
-    var upcomingAppointments by remember { mutableStateOf(mockUpcoming) }
     val tabs = listOf("Próximas", "Historial")
 
     // Cancel dialog state
     var showCancelDialog by remember { mutableStateOf(false) }
-    var appointmentToCancel by remember { mutableStateOf<AppointmentItem?>(null) }
+    var appointmentToCancel by remember { mutableStateOf<AppointmentViewModel.AppointmentItem?>(null) }
+
+    // Cargar citas al iniciar
+    LaunchedEffect(Unit) {
+        viewModel.loadAppointments()
+    }
+
+    // Reset cancel success después de mostrar
+    LaunchedEffect(cancelSuccess) {
+        if (cancelSuccess) {
+            viewModel.resetCancelSuccess()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Tab Row
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = DarkGray,
-                contentColor = Gold,
-                indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        height = 3.dp,
-                        color = Gold
-                    )
-                }
+        if (isLoading && upcoming.isEmpty() && past.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = {
-                            Text(
-                                text = title,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selectedTab == index) Gold else TextGray
-                            )
-                        }
+                CircularProgressIndicator(color = Gold)
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Tab Row
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = DarkGray,
+                    contentColor = Gold,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.Indicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                            height = 3.dp,
+                            color = Gold
+                        )
+                    }
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = {
+                                Text(
+                                    text = title,
+                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedTab == index) Gold else TextGray
+                                )
+                            }
+                        )
+                    }
+                }
+
+                // Error message
+                if (errorMessage != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = errorMessage!!,
+                            color = RedCancel,
+                            fontSize = 14.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+
+                // Tab content
+                when (selectedTab) {
+                    0 -> UpcomingTab(
+                        appointments = upcoming,
+                        onCancelClick = { appointment ->
+                            appointmentToCancel = appointment
+                            showCancelDialog = true
+                        },
+                        onNavigateToBooking = onNavigateToBooking
+                    )
+                    1 -> HistoryTab(
+                        appointments = past,
+                        onNavigateToBooking = onNavigateToBooking
                     )
                 }
-            }
-
-            // Tab content
-            when (selectedTab) {
-                0 -> UpcomingTab(
-                    appointments = upcomingAppointments,
-                    onCancelClick = { appointment ->
-                        appointmentToCancel = appointment
-                        showCancelDialog = true
-                    },
-                    onNavigateToBooking = onNavigateToBooking
-                )
-                1 -> HistoryTab(
-                    appointments = mockHistory,
-                    onNavigateToBooking = onNavigateToBooking
-                )
             }
         }
 
@@ -277,8 +220,8 @@ fun AppointmentsScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            appointmentToCancel?.let { toCancel ->
-                                upcomingAppointments = upcomingAppointments.filter { it.id != toCancel.id }
+                            appointmentToCancel?.let {
+                                viewModel.cancelAppointment(it.id)
                             }
                             showCancelDialog = false
                             appointmentToCancel = null
@@ -309,8 +252,8 @@ fun AppointmentsScreen(
 
 @Composable
 private fun UpcomingTab(
-    appointments: List<AppointmentItem>,
-    onCancelClick: (AppointmentItem) -> Unit,
+    appointments: List<AppointmentViewModel.AppointmentItem>,
+    onCancelClick: (AppointmentViewModel.AppointmentItem) -> Unit,
     onNavigateToBooking: () -> Unit
 ) {
     if (appointments.isEmpty()) {
@@ -321,28 +264,28 @@ private fun UpcomingTab(
             onBookClick = onNavigateToBooking
         )
     } else {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            appointments.forEach { appointment ->
+            items(appointments, key = { it.id }) { appointment ->
                 UpcomingAppointmentCard(
                     appointment = appointment,
                     onCancelClick = { onCancelClick(appointment) }
                 )
             }
-            // Bottom spacing for FAB
-            Spacer(modifier = Modifier.height(72.dp))
+            item {
+                Spacer(modifier = Modifier.height(72.dp))
+            }
         }
     }
 }
 
 @Composable
 private fun HistoryTab(
-    appointments: List<AppointmentItem>,
+    appointments: List<AppointmentViewModel.AppointmentItem>,
     onNavigateToBooking: () -> Unit
 ) {
     if (appointments.isEmpty()) {
@@ -353,25 +296,25 @@ private fun HistoryTab(
             onBookClick = onNavigateToBooking
         )
     } else {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            appointments.forEach { appointment ->
+            items(appointments, key = { it.id }) { appointment ->
                 HistoryAppointmentCard(appointment = appointment)
             }
-            // Bottom spacing for FAB
-            Spacer(modifier = Modifier.height(72.dp))
+            item {
+                Spacer(modifier = Modifier.height(72.dp))
+            }
         }
     }
 }
 
 @Composable
 private fun UpcomingAppointmentCard(
-    appointment: AppointmentItem,
+    appointment: AppointmentViewModel.AppointmentItem,
     onCancelClick: () -> Unit
 ) {
     val statusColor = when (appointment.status) {
@@ -485,27 +428,30 @@ private fun UpcomingAppointmentCard(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Cancel button
-                Button(
-                    onClick = onCancelClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = RedCancel.copy(alpha = 0.12f),
-                        contentColor = RedCancel
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Cancel,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Cancelar Cita",
-                        fontWeight = FontWeight.Medium
-                    )
+                // Cancel button (solo para pendientes/confirmadas)
+                if (appointment.status == BookingStatus.PENDING ||
+                    appointment.status == BookingStatus.CONFIRMED) {
+                    Button(
+                        onClick = onCancelClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = RedCancel.copy(alpha = 0.12f),
+                            contentColor = RedCancel
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Cancel,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Cancelar Cita",
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }
@@ -513,7 +459,7 @@ private fun UpcomingAppointmentCard(
 }
 
 @Composable
-private fun HistoryAppointmentCard(appointment: AppointmentItem) {
+private fun HistoryAppointmentCard(appointment: AppointmentViewModel.AppointmentItem) {
     val statusColor = when (appointment.status) {
         BookingStatus.COMPLETED -> GreenConfirmed
         BookingStatus.CANCELLED -> RedCancel

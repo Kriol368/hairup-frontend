@@ -589,3 +589,98 @@ private fun ProductDialog(
         }
     )
 }
+
+@Composable
+private fun ProductDialog(
+    product: Product?,
+    onDismiss: () -> Unit,
+    onSave: (name: String, description: String, price: Double) -> Unit
+) {
+    var name by remember { mutableStateOf(product?.name ?: "") }
+    var description by remember { mutableStateOf(product?.description ?: "") }
+    var priceText by remember { mutableStateOf(product?.price?.toInt()?.toString() ?: "") }
+    var nameError by remember { mutableStateOf(false) }
+    var priceError by remember { mutableStateOf(false) }
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = Gold,
+        unfocusedBorderColor = LeatherBrown,
+        focusedLabelColor = Gold,
+        unfocusedLabelColor = TextGray,
+        cursorColor = Gold,
+        focusedTextColor = White,
+        unfocusedTextColor = White
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkGray,
+        titleContentColor = White,
+        title = {
+            Text(
+                text = if (product != null) "Editar producto" else "Nuevo producto",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it; nameError = false },
+                    label = { Text("Nombre") },
+                    isError = nameError,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    supportingText = if (nameError) {
+                        { Text("El nombre es obligatorio", color = RedCancel) }
+                    } else null
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Descripción") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors
+                )
+                OutlinedTextField(
+                    value = priceText,
+                    onValueChange = { priceText = it; priceError = false },
+                    label = { Text("Precio (€)") },
+                    isError = priceError,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    supportingText = if (priceError) {
+                        { Text("Introduce un precio válido", color = RedCancel) }
+                    } else null
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val trimmedName = name.trim()
+                    val price = priceText.toDoubleOrNull()
+                    nameError = trimmedName.isBlank()
+                    priceError = price == null || price < 0
+                    if (!nameError && !priceError) {
+                        onSave(trimmedName, description.trim(), price!!)
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Gold,
+                    contentColor = CarbonBlack
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) { Text("Guardar", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = TextGray)
+            }
+        }
+    )
+}

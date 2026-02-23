@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,12 +38,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
 import com.example.hairup.R
+import com.example.hairup.data.SessionManager
 import com.example.hairup.ui.components.HairUpBottomBar
 import com.example.hairup.ui.components.clientBottomBarItems
 import com.example.hairup.ui.screens.client.AppointmentsScreen
@@ -49,6 +55,8 @@ import com.example.hairup.ui.screens.client.ClientDashboardContent
 import com.example.hairup.ui.screens.client.LoyaltyScreen
 import com.example.hairup.ui.screens.client.ProfileScreen
 import com.example.hairup.ui.screens.client.ShopScreen
+import com.example.hairup.ui.viewmodel.HomeViewModel
+import com.example.hairup.ui.viewmodel.HomeViewModelFactory
 
 private val CarbonBlack = Color(0xFF121212)
 private val Gold = Color(0xFFD4AF37)
@@ -59,8 +67,21 @@ fun ClientHomeScreen(
     onNavigateToBooking: () -> Unit,
     onLogout: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val viewModel: HomeViewModel = viewModel(
+        factory = HomeViewModelFactory(sessionManager)
+    )
+
     var selectedItem by remember { mutableStateOf(0) }
     var showNotifications by remember { mutableStateOf(false) }
+
+    val homeState by viewModel.homeState.collectAsState()
+
+    // Cargar datos al iniciar
+    LaunchedEffect(Unit) {
+        viewModel.loadHomeData()
+    }
 
     Scaffold(
         containerColor = CarbonBlack,
@@ -151,12 +172,58 @@ fun ClientHomeScreen(
                     .background(CarbonBlack)
             ) {
                 when (selectedItem) {
-                    0 -> ClientDashboardContent(
-                        onNewAppointment = onNavigateToBooking,
-                        onNavigateToShop = { selectedItem = 2 },
-                        onNavigateToAppointments = { selectedItem = 1 },
-                        onNavigateToLoyalty = { selectedItem = 3 }
-                    )
+                    0 -> {
+                        when (val state = homeState) {
+                            is HomeViewModel.HomeState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = Gold)
+                                }
+                            }
+                            is HomeViewModel.HomeState.Success -> {
+                                ClientDashboardContent(
+                                    user = state.data.user,
+                                    currentLevel = state.data.currentLevel,
+                                    nextLevel = state.data.nextLevel,
+                                    nextAppointment = state.data.nextAppointment,
+                                    onNewAppointment = onNavigateToBooking,
+                                    onNavigateToShop = { selectedItem = 2 },
+                                    onNavigateToAppointments = { selectedItem = 1 },
+                                    onNavigateToLoyalty = onNavigateToLoyalty
+                                )
+                            }
+                            is HomeViewModel.HomeState.Error -> {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "Error al cargar",
+                                        color = Color(0xFFB0B0B0)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = state.message,
+                                        color = Color(0xFFE53935),
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    androidx.compose.material3.Button(
+                                        onClick = { viewModel.loadHomeData() },
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                            containerColor = Gold,
+                                            contentColor = CarbonBlack
+                                        )
+                                    ) {
+                                        Text("Reintentar")
+                                    }
+                                }
+                            }
+                        }
+                    }
                     1 -> AppointmentsScreen(
                         onNavigateToBooking = onNavigateToBooking
                     )

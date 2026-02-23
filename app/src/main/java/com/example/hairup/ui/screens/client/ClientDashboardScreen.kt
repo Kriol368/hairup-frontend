@@ -26,7 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -50,6 +50,7 @@ import com.example.hairup.R
 import com.example.hairup.model.Level
 import com.example.hairup.model.User
 import com.example.hairup.ui.components.LevelIcon
+import com.example.hairup.ui.viewmodel.HomeViewModel
 
 // Colores del tema
 private val CarbonBlack = Color(0xFF121212)
@@ -61,20 +62,12 @@ private val LeatherBrown = Color(0xFF8B5E3C)
 private val TextGray = Color(0xFFB0B0B0)
 private val White = Color(0xFFFFFFFF)
 
-// Datos mockeados
-private val mockUser = User(
-    id = 1,
-    email = "maria@example.com",
-    name = "Maria Cliente",
-    xp = 1250,
-    levelId = 3
-)
-
-private val mockCurrentLevel = Level(id = 3, name = "Oro", required = 1000, reward = "Corte gratis cada 10 visitas + 15% descuento")
-private val mockNextLevel = Level(id = 4, name = "Platino", required = 2000, reward = "Tratamiento premium gratis + 25% descuento")
-
 @Composable
 fun ClientDashboardContent(
+    user: User,
+    currentLevel: Level,
+    nextLevel: Level?,
+    nextAppointment: HomeViewModel.NextAppointment?,
     onNewAppointment: () -> Unit = {},
     onNavigateToShop: () -> Unit = {},
     onNavigateToAppointments: () -> Unit = {},
@@ -89,9 +82,9 @@ fun ClientDashboardContent(
     ) {
         // Loyalty Card - Premium
         LoyaltyCard(
-            user = mockUser,
-            currentLevel = mockCurrentLevel,
-            nextLevel = mockNextLevel,
+            user = user,
+            currentLevel = currentLevel,
+            nextLevel = nextLevel,
             onClick = onNavigateToLoyalty
         )
 
@@ -106,8 +99,7 @@ fun ClientDashboardContent(
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             QuickActionCard(
                 modifier = Modifier.weight(1f),
@@ -131,37 +123,83 @@ fun ClientDashboardContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Next Appointment
-        Text(
-            text = "Proxima Cita",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp),
-            color = Gold
-        )
+        // Next Appointment (si existe)
+        if (nextAppointment != null) {
+            Text(
+                text = "Proxima Cita",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp),
+                color = Gold
+            )
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkGray)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Corte y Color",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Gold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Manana, 16:30",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = White.copy(alpha = 0.9f)
-                )
-                Text(
-                    text = "con Ana Estilista",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextGray
-                )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = nextAppointment.serviceName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Gold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Formatear fecha (asumiendo formato YYYY-MM-DD)
+                    val dateParts = nextAppointment.date.split("-")
+                    val formattedDate = if (dateParts.size == 3) {
+                        "${dateParts[2]}/${dateParts[1]}/${dateParts[0]}"
+                    } else {
+                        nextAppointment.date
+                    }
+
+                    Text(
+                        text = "$formattedDate, ${nextAppointment.time}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = White.copy(alpha = 0.9f)
+                    )
+                    Text(
+                        text = "con ${nextAppointment.stylistName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextGray
+                    )
+                }
+            }
+        } else {
+            // Si no hay próxima cita, mostrar card para reservar
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNewAppointment() },
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.reserva),
+                        contentDescription = null,
+                        tint = Gold,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "No tienes citas próximas",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = White
+                        )
+                        Text(
+                            text = "Toca para reservar ahora",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextGray
+                        )
+                    }
+                }
             }
         }
 
@@ -171,36 +209,26 @@ fun ClientDashboardContent(
 
 @Composable
 private fun LoyaltyCard(
-    user: User,
-    currentLevel: Level,
-    nextLevel: Level,
-    onClick: () -> Unit
+    user: User, currentLevel: Level, nextLevel: Level?, onClick: () -> Unit
 ) {
-    val xpProgress = if (nextLevel.required > currentLevel.required) {
+    val xpProgress = if (nextLevel != null && nextLevel.required > currentLevel.required) {
         (user.xp - currentLevel.required).toFloat() / (nextLevel.required - currentLevel.required).toFloat()
     } else 1f
-    val xpRemaining = nextLevel.required - user.xp
+    val xpRemaining = nextLevel?.required?.minus(user.xp) ?: 0
 
     // Shimmer animation
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
     val shimmerOffset by infiniteTransition.animateFloat(
-        initialValue = -300f,
-        targetValue = 600f,
-        animationSpec = infiniteRepeatable(
+        initialValue = -300f, targetValue = 600f, animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 3000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerOffset"
+        ), label = "shimmerOffset"
     )
 
     val shimmerBrush = Brush.linearGradient(
         colors = listOf(
-            Gold.copy(alpha = 0.4f),
-            GoldLight.copy(alpha = 0.8f),
-            Gold.copy(alpha = 0.4f)
-        ),
-        start = Offset(shimmerOffset, 0f),
-        end = Offset(shimmerOffset + 300f, 100f)
+            Gold.copy(alpha = 0.4f), GoldLight.copy(alpha = 0.8f), Gold.copy(alpha = 0.4f)
+        ), start = Offset(shimmerOffset, 0f), end = Offset(shimmerOffset + 300f, 100f)
     )
 
     Card(
@@ -208,9 +236,7 @@ private fun LoyaltyCard(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .border(
-                width = 1.5.dp,
-                brush = shimmerBrush,
-                shape = RoundedCornerShape(20.dp)
+                width = 1.5.dp, brush = shimmerBrush, shape = RoundedCornerShape(20.dp)
             )
             .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
@@ -232,13 +258,10 @@ private fun LoyaltyCard(
         Column(modifier = Modifier.padding(20.dp)) {
             // Level badge + name
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
             ) {
                 LevelIcon(
-                    levelName = currentLevel.name,
-                    size = 52.dp,
-                    showGlow = true
+                    levelName = currentLevel.name, size = 52.dp, showGlow = true
                 )
 
                 Spacer(modifier = Modifier.width(14.dp))
@@ -259,7 +282,7 @@ private fun LoyaltyCard(
 
                 // Arrow indicator
                 Icon(
-                    imageVector = Icons.Default.KeyboardArrowRight,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Ver fidelidad",
                     tint = Gold.copy(alpha = 0.7f),
                     modifier = Modifier.size(28.dp)
@@ -270,8 +293,7 @@ private fun LoyaltyCard(
 
             // XP display
             Row(
-                verticalAlignment = Alignment.Bottom,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = "${user.xp}",
@@ -315,14 +337,21 @@ private fun LoyaltyCard(
 
             // Progress text
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "Faltan $xpRemaining XP para ${nextLevel.name}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextGray
-                )
+                if (nextLevel != null) {
+                    Text(
+                        text = "Faltan $xpRemaining XP para ${nextLevel.name}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGray
+                    )
+                } else {
+                    Text(
+                        text = "¡Nivel máximo alcanzado!",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = GoldLight
+                    )
+                }
                 Text(
                     text = "${(xpProgress * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,
@@ -347,7 +376,7 @@ private fun LoyaltyCard(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
-                    imageVector = Icons.Default.KeyboardArrowRight,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
                     tint = Gold,
                     modifier = Modifier.size(18.dp)
@@ -359,19 +388,14 @@ private fun LoyaltyCard(
 
 @Composable
 private fun QuickActionCard(
-    iconRes: Int,
-    title: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    iconRes: Int, title: String, onClick: () -> Unit, modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier
-            .clickable { onClick() }
-            .height(120.dp),
+    Card(modifier = modifier
+        .clickable { onClick() }
+        .height(120.dp),
         colors = CardDefaults.cardColors(containerColor = DarkGray),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -383,8 +407,7 @@ private fun QuickActionCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Gold.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
+                    .background(Gold.copy(alpha = 0.2f)), contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = iconRes),
