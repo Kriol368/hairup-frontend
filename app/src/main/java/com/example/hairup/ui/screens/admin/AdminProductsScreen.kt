@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inventory
@@ -27,6 +28,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,17 +66,22 @@ private val GreenConfirmed = Color(0xFF4CAF50)
 private val RedCancel = Color(0xFFE53935)
 private val LeatherBrown = Color(0xFF8B5E3C)
 
+private val defaultCategories = listOf(
+    "Champús", "Acondicionadores", "Tratamientos", "Styling", "Accesorios"
+)
+
 private val initialProducts = listOf(
-    Product(1, "Champú Reparador", "Reparación intensiva para cabello dañado", 25.0, "", true),
-    Product(2, "Acondicionador Premium", "Suavidad y brillo duradero", 20.0, "", true),
-    Product(3, "Mascarilla Hidratante", "Hidratación profunda en 5 minutos", 18.0, "", true),
-    Product(4, "Sérum Capilar", "Tratamiento sin aclarado para puntas", 32.0, "", false),
-    Product(5, "Spray Protector Térmico", "Protección hasta 230°C", 15.0, "", true)
+    Product(1, "Champú Reparador", "Reparación intensiva para cabello dañado", 25.0, "", true, category = "Champús"),
+    Product(2, "Acondicionador Premium", "Suavidad y brillo duradero", 20.0, "", true, category = "Acondicionadores"),
+    Product(3, "Mascarilla Hidratante", "Hidratación profunda en 5 minutos", 18.0, "", true, category = "Tratamientos"),
+    Product(4, "Sérum Capilar", "Tratamiento sin aclarado para puntas", 32.0, "", false, category = "Tratamientos"),
+    Product(5, "Spray Protector Térmico", "Protección hasta 230°C", 15.0, "", true, category = "Styling")
 )
 
 @Composable
 fun AdminProductsScreen() {
     var products by remember { mutableStateOf(initialProducts) }
+    var categories by remember { mutableStateOf(defaultCategories) }
     var showDialog by remember { mutableStateOf(false) }
     var editingProduct by remember { mutableStateOf<Product?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -124,10 +135,7 @@ fun AdminProductsScreen() {
         }
 
         FloatingActionButton(
-            onClick = {
-                editingProduct = null
-                showDialog = true
-            },
+            onClick = { editingProduct = null; showDialog = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
@@ -141,16 +149,24 @@ fun AdminProductsScreen() {
     if (showDialog) {
         ProductDialog(
             product = editingProduct,
+            categories = categories,
+            onAddCategory = { newCat ->
+                if (newCat.isNotBlank() && !categories.contains(newCat)) {
+                    categories = categories + newCat
+                }
+            },
             onDismiss = { showDialog = false; editingProduct = null },
-            onSave = { name, description, price ->
+            onSave = { name, description, price, imageUrl, category ->
                 val current = editingProduct
                 if (current != null) {
                     products = products.map {
-                        if (it.id == current.id) it.copy(name = name, description = description, price = price) else it
+                        if (it.id == current.id)
+                            it.copy(name = name, description = description, price = price, image = imageUrl, category = category)
+                        else it
                     }
                 } else {
                     val newId = (products.maxOfOrNull { it.id } ?: 0) + 1
-                    products = products + Product(newId, name, description, price, "", true)
+                    products = products + Product(newId, name, description, price, imageUrl, true, category = category)
                 }
                 showDialog = false
                 editingProduct = null
@@ -174,10 +190,7 @@ fun AdminProductsScreen() {
                         showDeleteDialog = false
                         productToDelete = null
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = RedCancel,
-                        contentColor = White
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = RedCancel, contentColor = White),
                     shape = RoundedCornerShape(8.dp)
                 ) { Text("Eliminar") }
             },
@@ -244,7 +257,7 @@ private fun ProductCard(
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         text = "€${product.price.toInt()}",
@@ -252,6 +265,22 @@ private fun ProductCard(
                         fontWeight = FontWeight.Bold,
                         color = Gold
                     )
+                    if (product.category.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(LeatherBrown.copy(alpha = 0.2f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = product.category,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LeatherBrown,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
@@ -271,20 +300,10 @@ private fun ProductCard(
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Editar",
-                        tint = Gold,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Gold, modifier = Modifier.size(20.dp))
                 }
                 IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Eliminar",
-                        tint = RedCancel,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = RedCancel, modifier = Modifier.size(20.dp))
                 }
             }
         }
@@ -299,10 +318,7 @@ private fun ProductCard(
                 onClick = onToggleAvailability,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (product.available)
-                        LeatherBrown.copy(alpha = 0.2f)
-                    else
-                        GreenConfirmed.copy(alpha = 0.15f),
+                    containerColor = if (product.available) LeatherBrown.copy(alpha = 0.2f) else GreenConfirmed.copy(alpha = 0.15f),
                     contentColor = if (product.available) LeatherBrown else GreenConfirmed
                 ),
                 shape = RoundedCornerShape(10.dp),
@@ -316,6 +332,262 @@ private fun ProductCard(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProductDialog(
+    product: Product?,
+    categories: List<String>,
+    onAddCategory: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onSave: (name: String, description: String, price: Double, imageUrl: String, category: String) -> Unit
+) {
+    var name by remember { mutableStateOf(product?.name ?: "") }
+    var description by remember { mutableStateOf(product?.description ?: "") }
+    var priceText by remember { mutableStateOf(product?.price?.toInt()?.toString() ?: "") }
+    var imageUrl by remember { mutableStateOf(product?.image ?: "") }
+    var selectedCategory by remember {
+        mutableStateOf(product?.category?.ifBlank { categories.first() } ?: categories.first())
+    }
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var showNewCategoryField by remember { mutableStateOf(false) }
+    var newCategoryText by remember { mutableStateOf("") }
+    var newCategoryError by remember { mutableStateOf(false) }
+
+    var nameError by remember { mutableStateOf(false) }
+    var priceError by remember { mutableStateOf(false) }
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = Gold,
+        unfocusedBorderColor = LeatherBrown,
+        focusedLabelColor = Gold,
+        unfocusedLabelColor = TextGray,
+        cursorColor = Gold,
+        focusedTextColor = White,
+        unfocusedTextColor = White
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkGray,
+        titleContentColor = White,
+        title = {
+            Text(
+                text = if (product != null) "Editar producto" else "Nuevo producto",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Nombre
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it; nameError = false },
+                    label = { Text("Nombre") },
+                    isError = nameError,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    supportingText = if (nameError) {
+                        { Text("El nombre es obligatorio", color = RedCancel) }
+                    } else null
+                )
+
+                // Descripción
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Descripción") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors
+                )
+
+                // Precio
+                OutlinedTextField(
+                    value = priceText,
+                    onValueChange = { priceText = it; priceError = false },
+                    label = { Text("Precio (€)") },
+                    isError = priceError,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    supportingText = if (priceError) {
+                        { Text("Introduce un precio válido", color = RedCancel) }
+                    } else null
+                )
+
+                // Categoría (dropdown)
+                ExposedDropdownMenuBox(
+                    expanded = categoryExpanded,
+                    onExpandedChange = { categoryExpanded = !categoryExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedCategory,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Categoría") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        colors = fieldColors
+                    )
+                    ExposedDropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false },
+                        modifier = Modifier.background(DarkGray)
+                    ) {
+                        // Categorías existentes
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = category,
+                                        color = if (category == selectedCategory) Gold else White,
+                                        fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                onClick = {
+                                    selectedCategory = category
+                                    categoryExpanded = false
+                                    showNewCategoryField = false
+                                }
+                            )
+                        }
+
+                        // Separador
+                        Divider(
+                            color = LeatherBrown.copy(alpha = 0.3f),
+                            thickness = 0.5.dp
+                        )
+
+                        // Opción nueva categoría
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = Gold,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Nueva categoría",
+                                        color = Gold,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            },
+                            onClick = {
+                                categoryExpanded = false
+                                showNewCategoryField = true
+                                newCategoryText = ""
+                                newCategoryError = false
+                            }
+                        )
+                    }
+                }
+
+                // Campo inline para nueva categoría
+                if (showNewCategoryField) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = newCategoryText,
+                                onValueChange = { newCategoryText = it; newCategoryError = false },
+                                label = { Text("Nueva categoría") },
+                                isError = newCategoryError,
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                colors = fieldColors
+                            )
+                            IconButton(
+                                onClick = {
+                                    val trimmed = newCategoryText.trim()
+                                    when {
+                                        trimmed.isBlank() -> newCategoryError = true
+                                        categories.any { it.equals(trimmed, ignoreCase = true) } -> newCategoryError = true
+                                        else -> {
+                                            onAddCategory(trimmed)
+                                            selectedCategory = trimmed
+                                            showNewCategoryField = false
+                                            newCategoryText = ""
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Gold.copy(alpha = 0.15f))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Confirmar",
+                                    tint = Gold,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        if (newCategoryError) {
+                            Text(
+                                text = if (newCategoryText.isBlank()) "El nombre no puede estar vacío"
+                                       else "Esta categoría ya existe",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = RedCancel,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                // URL de imagen
+                OutlinedTextField(
+                    value = imageUrl,
+                    onValueChange = { imageUrl = it },
+                    label = { Text("URL de imagen (opcional)") },
+                    placeholder = { Text("https://...", color = TextGray.copy(alpha = 0.5f)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val trimmedName = name.trim()
+                    val price = priceText.toDoubleOrNull()
+                    nameError = trimmedName.isBlank()
+                    priceError = price == null || price < 0
+                    if (!nameError && !priceError) {
+                        onSave(trimmedName, description.trim(), price!!, imageUrl.trim(), selectedCategory)
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Gold,
+                    contentColor = CarbonBlack
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) { Text("Guardar", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = TextGray)
+            }
+        }
+    )
 }
 
 @Composable

@@ -49,7 +49,7 @@ import com.example.hairup.ui.viewmodel.AuthViewModelFactory
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (Boolean) -> Unit,
+    onLoginSuccess: (isAdmin: Boolean, stylistId: Int) -> Unit,
     onNavigateToRegister: () -> Unit = {}
 ) {
     val context = LocalContext.current

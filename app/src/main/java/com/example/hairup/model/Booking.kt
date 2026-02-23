@@ -6,7 +6,8 @@ data class Booking(
     val time: String = "",
     val status: Int = BookingStatus.PENDING.code,
     val userId: Int = 0,
-    val serviceId: Int = 0
+    val serviceId: Int = 0,
+    val barberId: Int = 0
 ) {
     fun getStatus(): BookingStatus = BookingStatus.fromCode(status)
 }

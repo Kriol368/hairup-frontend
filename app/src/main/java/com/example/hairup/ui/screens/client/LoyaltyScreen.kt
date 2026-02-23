@@ -34,12 +34,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.hairup.data.SessionManager
 import com.example.hairup.model.Level
+import com.example.hairup.model.Reward
 import com.example.hairup.model.User
 import com.example.hairup.ui.components.LevelIcon
 import com.example.hairup.ui.components.getLevelColor
@@ -181,7 +178,7 @@ fun LoyaltyScreen(
                 xpProgress = xpProgress
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
             // B) Niveles y sus ventajas
             SectionTitle("Niveles y Ventajas")
@@ -191,7 +188,7 @@ fun LoyaltyScreen(
                 currentLevelId = userLevelId
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
             // C) Recompensas disponibles
             SectionTitle("Recompensas Disponibles")
@@ -232,8 +229,7 @@ fun LoyaltyScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-        }
+        Spacer(modifier = Modifier.height(32.dp))
     }
 
     // Diálogo de confirmación de canje
@@ -457,7 +453,6 @@ private fun LevelHeader(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Progress bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -471,9 +466,7 @@ private fun LevelHeader(
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(GoldDark, Gold, GoldLight)
-                            )
+                            Brush.horizontalGradient(colors = listOf(GoldDark, Gold, GoldLight))
                         )
                 )
             }
@@ -491,10 +484,7 @@ private fun LevelHeader(
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextGray
                     )
-                    LevelIcon(
-                        levelName = nextLevel.name,
-                        size = 18.dp
-                    )
+                    LevelIcon(levelName = nextLevel.name, size = 18.dp)
                 }
             } else {
                 Text(
@@ -510,10 +500,7 @@ private fun LevelHeader(
 
 // B) Level Cards (horizontal scroll)
 @Composable
-private fun LevelCardsRow(
-    levels: List<Level>,
-    currentLevelId: Int
-) {
+private fun LevelCardsRow(levels: List<Level>, currentLevelId: Int) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -527,29 +514,15 @@ private fun LevelCardsRow(
 }
 
 @Composable
-private fun LevelCard(
-    level: Level,
-    isUnlocked: Boolean,
-    isCurrent: Boolean
-) {
+private fun LevelCard(level: Level, isUnlocked: Boolean, isCurrent: Boolean) {
     Card(
         modifier = Modifier
             .width(170.dp)
-            .then(
-                if (isCurrent) Modifier.border(2.dp, Gold, RoundedCornerShape(16.dp))
-                else Modifier
-            )
-            .then(
-                if (!isUnlocked) Modifier.alpha(0.5f)
-                else Modifier
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCurrent) DarkSurface else DarkGray
-        ),
+            .then(if (isCurrent) Modifier.border(2.dp, Gold, RoundedCornerShape(16.dp)) else Modifier)
+            .then(if (!isUnlocked) Modifier.alpha(0.5f) else Modifier),
+        colors = CardDefaults.cardColors(containerColor = if (isCurrent) DarkSurface else DarkGray),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isCurrent) 8.dp else 2.dp
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isCurrent) 8.dp else 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -557,11 +530,7 @@ private fun LevelCard(
         ) {
             // Badge or lock
             if (isUnlocked) {
-                LevelIcon(
-                    levelName = level.name,
-                    size = 48.dp,
-                    showGlow = isCurrent
-                )
+                LevelIcon(levelName = level.name, size = 48.dp, showGlow = isCurrent)
             } else {
                 Box(
                     modifier = Modifier
@@ -689,7 +658,6 @@ private fun RewardCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = reward.name,
@@ -728,7 +696,6 @@ private fun RewardCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Redeem button
             Button(
                 onClick = onRedeemClick,
                 enabled = canRedeem,

@@ -12,7 +12,6 @@ import com.example.hairup.ui.screens.RegisterScreen
 import com.example.hairup.ui.screens.ClientHomeScreen
 import com.example.hairup.ui.screens.client.BookingScreen
 import com.example.hairup.ui.screens.admin.AdminHomeScreen
-import com.example.hairup.ui.screens.client.LoyaltyScreen
 
 @Composable
 fun AppNavigation() {
@@ -23,7 +22,7 @@ fun AppNavigation() {
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
             LoginScreen(
-                onLoginSuccess = { isAdmin ->
+                onLoginSuccess = { isAdmin, stylistId ->
                     if (isAdmin) {
                         navController.navigate("admin_home") {
                             popUpTo("login") { inclusive = true }
@@ -56,19 +55,12 @@ fun AppNavigation() {
         composable("client_home") {
             ClientHomeScreen(
                 onNavigateToBooking = { navController.navigate("booking") },
-                onNavigateToLoyalty = { navController.navigate("client/loyalty") },
                 onLogout = {
                     sessionManager.logout()
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
                 }
-            )
-        }
-
-        composable("client/loyalty") {
-            LoyaltyScreen(
-                onBack = { navController.popBackStack() }
             )
         }
 
@@ -79,8 +71,19 @@ fun AppNavigation() {
             )
         }
 
-        composable("admin_home") {
-            AdminHomeScreen()
+        composable(
+            route = "admin_home/{stylistId}",
+            arguments = listOf(navArgument("stylistId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val stylistId = backStackEntry.arguments?.getInt("stylistId") ?: 0
+            AdminHomeScreen(
+                stylistId = stylistId,
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
