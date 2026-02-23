@@ -55,6 +55,37 @@ class ShopRepository {
         })
     }
 
+    fun createCategory(
+        token: String,
+        request: CreateCategoryRequest,
+        callback: (Result<CategorySuccessResponse>) -> Unit
+    ) {
+        Log.d(TAG, "Creando categoría: ${request.name}")
+
+        RetrofitClient.apiService.createCategory("Bearer $token", request).enqueue(object : Callback<CategorySuccessResponse> {
+            override fun onResponse(
+                call: Call<CategorySuccessResponse>,
+                response: Response<CategorySuccessResponse>
+            ) {
+                if (response.isSuccessful) {
+                    response.body()?.let { callback(Result.success(it)) }
+                        ?: callback(Result.failure(Exception("Respuesta vacía")))
+                } else {
+                    val errorMsg = try {
+                        response.errorBody()?.string() ?: "Error ${response.code()}"
+                    } catch (e: Exception) {
+                        "Error ${response.code()}"
+                    }
+                    callback(Result.failure(Exception(errorMsg)))
+                }
+            }
+
+            override fun onFailure(call: Call<CategorySuccessResponse>, t: Throwable) {
+                callback(Result.failure(t))
+            }
+        })
+    }
+
     fun purchaseProducts(
         token: String,
         items: List<PurchaseItem>,

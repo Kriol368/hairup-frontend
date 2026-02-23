@@ -18,19 +18,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.ShoppingBag
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -52,7 +56,9 @@ private val GrayInactive = Color(0xFF8A8A8A)
 private val TopBorderGold = Color(0xFFDAA520)
 
 data class BottomBarItem(
-    val label: String, val activeIcon: ImageVector, val inactiveIcon: ImageVector
+    val label: String,
+    val activeIcon: ImageVector,
+    val inactiveIcon: ImageVector
 )
 
 // ===== Client tabs =====
@@ -60,15 +66,25 @@ val clientBottomBarItems = listOf(
     BottomBarItem("Inicio", Icons.Rounded.Home, Icons.Outlined.Home),
     BottomBarItem("Citas", Icons.Rounded.CalendarMonth, Icons.Outlined.CalendarMonth),
     BottomBarItem("Tienda", Icons.Rounded.ShoppingBag, Icons.Outlined.ShoppingBag),
+    BottomBarItem("Fidelidad", Icons.Rounded.Star, Icons.Outlined.Star),
     BottomBarItem("Perfil", Icons.Rounded.Person, Icons.Outlined.Person)
 )
 
-// ===== Admin tabs =====
+// ===== Admin tabs (peluqueros) =====
 val adminBottomBarItems = listOf(
     BottomBarItem("Dashboard", Icons.Rounded.Dashboard, Icons.Outlined.Dashboard),
     BottomBarItem("Citas", Icons.Rounded.CalendarMonth, Icons.Outlined.CalendarMonth),
     BottomBarItem("Productos", Icons.Rounded.Inventory2, Icons.Outlined.Inventory2),
-    BottomBarItem("Clientes", Icons.Rounded.People, Icons.Outlined.People)
+    BottomBarItem("Usuarios", Icons.Rounded.People, Icons.Outlined.People)
+)
+
+// ===== Admin Principal tabs (5 tabs con Servicios) =====
+val adminPrincipalBottomBarItems = listOf(
+    BottomBarItem("Dashboard", Icons.Rounded.Dashboard, Icons.Outlined.Dashboard),
+    BottomBarItem("Citas", Icons.Rounded.CalendarMonth, Icons.Outlined.CalendarMonth),
+    BottomBarItem("Productos", Icons.Rounded.Inventory2, Icons.Outlined.Inventory2),
+    BottomBarItem("Servicios", Icons.Rounded.ContentCut, Icons.Outlined.ContentCut),
+    BottomBarItem("Usuarios", Icons.Rounded.People, Icons.Outlined.People)
 )
 
 @Composable
@@ -115,7 +131,10 @@ fun HairUpBottomBar(
 
 @Composable
 private fun BottomBarTab(
-    item: BottomBarItem, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier
+    item: BottomBarItem,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val iconColor by animateColorAsState(
         targetValue = if (isSelected) GoldActive else GrayInactive,
@@ -128,14 +147,15 @@ private fun BottomBarTab(
         label = "labelColor"
     )
 
-
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .clickable(
-                interactionSource = remember { MutableInteractionSource() }, indication = ripple(
-                    bounded = true, color = GoldActive.copy(alpha = 0.3f)
-                ), onClick = onClick
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(
+                    color = GoldActive.copy(alpha = 0.3f)
+                ),
+                onClick = onClick
             )
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

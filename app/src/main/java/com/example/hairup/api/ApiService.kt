@@ -110,4 +110,62 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") productId: Int
     ): Call<Map<String, Any>>
+
+    @POST("api/admin/services")
+    fun createService(
+        @Header("Authorization") token: String,
+        @Body request: CreateServiceRequest
+    ): Call<Map<String, Any>>
+
+    @PUT("api/admin/services/{id}")
+    fun updateService(
+        @Header("Authorization") token: String,
+        @Path("id") serviceId: Int,
+        @Body request: UpdateServiceRequest
+    ): Call<Map<String, Any>>
+
+    @DELETE("api/admin/services/{id}")
+    fun deleteService(
+        @Header("Authorization") token: String,
+        @Path("id") serviceId: Int
+    ): Call<Map<String, Any>>
+
+    @GET("api/admin/appointments")
+    fun getAllAppointments(
+        @Header("Authorization") token: String
+    ): Call<AdminAppointmentsResponse>
+
+    @GET("api/admin/dashboard")
+    fun getDashboardStats(
+        @Header("Authorization") token: String
+    ): Call<DashboardStatsResponse>
+
+    @GET("api/admin/users")
+    fun getAllUsers(
+        @Header("Authorization") token: String
+    ): Call<AllUsersResponse>
+
+    @POST("api/admin/make-admin")
+    fun makeAdmin(
+        @Header("Authorization") token: String,
+        @Body request: ToggleAdminRequest
+    ): Call<Map<String, Any>>
+
+    @POST("api/admin/remove-admin")
+    fun removeAdmin(
+        @Header("Authorization") token: String,
+        @Body request: ToggleAdminRequest
+    ): Call<Map<String, Any>>
+
+    @POST("api/admin/toggle-active")
+    fun toggleActive(
+        @Header("Authorization") token: String,
+        @Body request: ToggleActiveRequest
+    ): Call<Map<String, Any>>
+
+    @POST("api/categories")
+    fun createCategory(
+        @Header("Authorization") token: String,
+        @Body request: CreateCategoryRequest
+    ): Call<CategorySuccessResponse>
 }

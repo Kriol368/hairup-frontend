@@ -2,6 +2,7 @@ package com.example.hairup.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hairup.api.models.CreateCategoryRequest
 import com.example.hairup.api.models.CreateProductRequest
 import com.example.hairup.api.models.UpdateProductRequest
 import com.example.hairup.data.SessionManager
@@ -21,7 +22,7 @@ class AdminProductViewModel(
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products: StateFlow<List<Product>> = _products
 
-    private val _categories = MutableStateFlow<List<Pair<Int, String>>>(emptyList())  // (id, nombre)
+    private val _categories = MutableStateFlow<List<Pair<Int, String>>>(emptyList())
     val categories: StateFlow<List<Pair<Int, String>>> = _categories
 
     private val _isLoading = MutableStateFlow(false)
@@ -84,6 +85,40 @@ class AdminProductViewModel(
         }
     }
 
+    fun createCategory(name: String) {
+        val token = sessionManager.getToken()
+        if (token.isNullOrEmpty()) {
+            _errorMessage.value = "No hay sesión activa"
+            return
+        }
+
+        _isLoading.value = true
+
+        val request = CreateCategoryRequest(name)
+
+        // Usar el repositorio de shop para crear categoría
+        // Necesitarías añadir este método a ShopRepository
+        shopRepository.createCategory(token, request) { result ->
+            viewModelScope.launch {
+                result.fold(
+                    onSuccess = { response ->
+                        if (response.success) {
+                            _successMessage.value = response.message
+                            loadCategories() // Recargar categorías
+                        } else {
+                            _errorMessage.value = response.message
+                        }
+                        _isLoading.value = false
+                    },
+                    onFailure = { exception ->
+                        _errorMessage.value = exception.message ?: "Error al crear categoría"
+                        _isLoading.value = false
+                    }
+                )
+            }
+        }
+    }
+
     fun createProduct(
         name: String,
         description: String,
@@ -119,7 +154,7 @@ class AdminProductViewModel(
                         _successMessage.value = response["message"] as? String ?: "Producto creado"
                         _operationSuccess.value = true
                         loadProducts()
-                        loadCategories() // Recargar por si acaso
+                        loadCategories()
                     },
                     onFailure = { exception ->
                         _errorMessage.value = exception.message ?: "Error al crear producto"

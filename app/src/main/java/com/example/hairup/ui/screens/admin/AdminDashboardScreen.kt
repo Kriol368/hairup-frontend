@@ -17,26 +17,37 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.hairup.data.SessionManager
+import com.example.hairup.model.MiniAppointment
+import com.example.hairup.ui.viewmodel.AdminDashboardViewModel
+import com.example.hairup.ui.viewmodel.AdminDashboardViewModelFactory
 
 private val CarbonBlack = Color(0xFF121212)
 private val DarkGray = Color(0xFF1E1E1E)
@@ -52,6 +63,34 @@ private val BlueAccent = Color(0xFF64B5F6)
 
 @Composable
 fun AdminDashboardScreen() {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val viewModel: AdminDashboardViewModel = viewModel(
+        factory = AdminDashboardViewModelFactory(sessionManager)
+    )
+
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val totalToday by viewModel.totalToday.collectAsState()
+    val pendingToday by viewModel.pendingToday.collectAsState()
+    val confirmedToday by viewModel.confirmedToday.collectAsState()
+    val totalStylists by viewModel.totalStylists.collectAsState()
+    val activeStylists by viewModel.activeStylists.collectAsState()
+    val todayAppointments by viewModel.todayAppointments.collectAsState()
+    val stylistName by viewModel.stylistName.collectAsState()
+    val stylistSpecialty by viewModel.stylistSpecialty.collectAsState()
+    val isGenericAdmin by viewModel.isGenericAdmin.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadDashboardStats()
+    }
+
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            viewModel.resetError()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -59,80 +98,105 @@ fun AdminDashboardScreen() {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        DashboardHeaderCard()
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "Resumen de hoy",
-            style = MaterialTheme.typography.titleMedium,
-            color = Gold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.DateRange,
-                iconColor = Gold,
-                label = "Citas hoy",
-                value = "8",
-                subtitle = "+2 vs ayer"
+        if (isLoading && todayAppointments.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Gold)
+            }
+        } else {
+            // Header card
+            DashboardHeaderCard(
+                name = stylistName,
+                specialty = stylistSpecialty,
+                isGenericAdmin = isGenericAdmin
             )
-            StatCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.AttachMoney,
-                iconColor = GreenConfirmed,
-                label = "Ingresos",
-                value = "€320",
-                subtitle = "del día"
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = if (isGenericAdmin) "Resumen general de hoy" else "Tu resumen de hoy",
+                style = MaterialTheme.typography.titleMedium,
+                color = Gold,
+                modifier = Modifier.padding(bottom = 12.dp)
             )
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            // KPIs
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.DateRange,
+                    iconColor = Gold,
+                    label = "Citas hoy",
+                    value = "$totalToday",
+                    subtitle = if (isGenericAdmin) "en el salón" else "tuyas"
+                )
+                StatCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Schedule,
+                    iconColor = AmberYellow,
+                    label = "Pendientes",
+                    value = "$pendingToday",
+                    subtitle = "por confirmar"
+                )
+                if (isGenericAdmin) {
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Group,
+                        iconColor = BlueAccent,
+                        label = "Peluqueros",
+                        value = "$activeStylists / $totalStylists",
+                        subtitle = "activos hoy"
+                    )
+                } else {
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Star,
+                        iconColor = GoldLight,
+                        label = "Confirmadas",
+                        value = "$confirmedToday",
+                        subtitle = "listas para hoy"
+                    )
+                }
+            }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.Group,
-                iconColor = BlueAccent,
-                label = "Clientes",
-                value = "6",
-                subtitle = "nuevos esta semana"
-            )
-            StatCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.Schedule,
-                iconColor = AmberYellow,
-                label = "Pendientes",
-                value = "3",
-                subtitle = "por confirmar"
-            )
-        }
+            Spacer(modifier = Modifier.height(24.dp))
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Citas de hoy",
-            style = MaterialTheme.typography.titleMedium,
-            color = Gold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        listOf(
-            Triple("Ana García", "Corte y Color", "10:00"),
-            Triple("Carlos López", "Tinte", "12:30"),
-            Triple("Laura Martín", "Tratamiento capilar", "15:00"),
-            Triple("Diego Ruiz", "Corte de pelo", "17:30")
-        ).forEach { (client, service, time) ->
-            MiniAppointmentRow(clientName = client, serviceName = service, time = time)
-            Spacer(modifier = Modifier.height(8.dp))
+            // Lista de citas de hoy
+            if (todayAppointments.isNotEmpty()) {
+                Text(
+                    text = if (isGenericAdmin) "Citas de hoy (todas)" else "Tus citas de hoy",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Gold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                todayAppointments.forEach { appt ->
+                    MiniAppointmentRow(
+                        appointment = appt,
+                        showStylistName = isGenericAdmin
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No hay citas para hoy",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextGray
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -140,7 +204,11 @@ fun AdminDashboardScreen() {
 }
 
 @Composable
-private fun DashboardHeaderCard() {
+private fun DashboardHeaderCard(
+    name: String,
+    specialty: String,
+    isGenericAdmin: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = CardBg),
@@ -171,7 +239,7 @@ private fun DashboardHeaderCard() {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Settings,
+                    imageVector = if (isGenericAdmin) Icons.Default.Settings else Icons.Default.Star,
                     contentDescription = null,
                     tint = Gold,
                     modifier = Modifier.size(28.dp)
@@ -180,15 +248,23 @@ private fun DashboardHeaderCard() {
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = "Panel de Administración",
+                    text = "Hola, $name",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = White
                 )
                 Text(
-                    text = "Dom, 22 Feb 2026",
+                    text = specialty,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextGray
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = java.text.SimpleDateFormat("EEEE, dd MMM yyyy", java.util.Locale("es", "ES"))
+                        .format(java.util.Date())
+                        .replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextGray.copy(alpha = 0.7f)
                 )
             }
         }
@@ -232,11 +308,7 @@ private fun StatCard(
                 fontWeight = FontWeight.Bold,
                 color = White
             )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextGray
-            )
+            Text(text = label, style = MaterialTheme.typography.bodySmall, color = TextGray)
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.labelSmall,
@@ -248,7 +320,10 @@ private fun StatCard(
 }
 
 @Composable
-private fun MiniAppointmentRow(clientName: String, serviceName: String, time: String) {
+private fun MiniAppointmentRow(
+    appointment: MiniAppointment,
+    showStylistName: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = DarkGray),
@@ -262,7 +337,7 @@ private fun MiniAppointmentRow(clientName: String, serviceName: String, time: St
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = time,
+                text = appointment.time,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Gold,
@@ -277,27 +352,35 @@ private fun MiniAppointmentRow(clientName: String, serviceName: String, time: St
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = clientName,
+                    text = appointment.clientName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = White
                 )
                 Text(
-                    text = serviceName,
+                    text = appointment.serviceName,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextGray
                 )
+                if (showStylistName && appointment.stylistName != null) {
+                    Text(
+                        text = "Con: ${appointment.stylistName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGray.copy(alpha = 0.7f),
+                        fontSize = 10.sp
+                    )
+                }
             }
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(GreenConfirmed.copy(alpha = 0.15f))
+                    .background(appointment.statusColor.copy(alpha = 0.15f))
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = "Confirmada",
+                    text = appointment.statusText,
                     style = MaterialTheme.typography.labelSmall,
-                    color = GreenConfirmed,
+                    color = appointment.statusColor,
                     fontWeight = FontWeight.Bold,
                     fontSize = 10.sp
                 )

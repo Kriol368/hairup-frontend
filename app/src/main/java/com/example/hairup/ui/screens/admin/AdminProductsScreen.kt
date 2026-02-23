@@ -110,7 +110,7 @@ fun AdminProductsScreen() {
         }
     }
 
-    // Mostrar éxito y cerrar diálogos
+    // Mostrar éxito
     LaunchedEffect(operationSuccess) {
         if (operationSuccess) {
             successMessage?.let {
@@ -207,6 +207,11 @@ fun AdminProductsScreen() {
         ProductDialog(
             product = editingProduct,
             categories = categories,
+            onAddCategory = { categoryName ->
+                // Aquí llamarías a un método del ViewModel para crear categoría
+                // Por ahora solo mostramos un mensaje
+                viewModel.createCategory(categoryName)
+            },
             onDismiss = { showDialog = false; editingProduct = null },
             onSave = { name, description, price, imageUrl, available, points, categoryId ->
                 if (editingProduct != null) {
@@ -419,6 +424,7 @@ private fun ProductCard(
 private fun ProductDialog(
     product: Product?,
     categories: List<Pair<Int, String>>,
+    onAddCategory: (String) -> Unit,
     onDismiss: () -> Unit,
     onSave: (name: String, description: String, price: Double, imageUrl: String, available: Boolean, points: Int, categoryId: Int?) -> Unit
 ) {
@@ -432,6 +438,9 @@ private fun ProductDialog(
     // Para categorías
     var selectedCategoryId by remember { mutableStateOf(product?.categoryId ?: -1) }
     var categoryExpanded by remember { mutableStateOf(false) }
+    var showNewCategoryField by remember { mutableStateOf(false) }
+    var newCategoryText by remember { mutableStateOf("") }
+    var newCategoryError by remember { mutableStateOf(false) }
 
     var nameError by remember { mutableStateOf(false) }
     var priceError by remember { mutableStateOf(false) }
@@ -516,7 +525,7 @@ private fun ProductDialog(
                     } else null
                 )
 
-                // Selector de categoría
+                // Categoría (dropdown)
                 ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
                     onExpandedChange = { categoryExpanded = !categoryExpanded }
@@ -553,6 +562,7 @@ private fun ProductDialog(
                             onClick = {
                                 selectedCategoryId = -1
                                 categoryExpanded = false
+                                showNewCategoryField = false
                             }
                         )
 
@@ -577,7 +587,96 @@ private fun ProductDialog(
                                 onClick = {
                                     selectedCategoryId = id
                                     categoryExpanded = false
+                                    showNewCategoryField = false
                                 }
+                            )
+                        }
+
+                        // Separador
+                        Divider(
+                            color = LeatherBrown.copy(alpha = 0.3f),
+                            thickness = 0.5.dp
+                        )
+
+                        // Opción nueva categoría
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = Gold,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Nueva categoría",
+                                        color = Gold,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            },
+                            onClick = {
+                                categoryExpanded = false
+                                showNewCategoryField = true
+                                newCategoryText = ""
+                                newCategoryError = false
+                            }
+                        )
+                    }
+                }
+
+                // Campo inline para nueva categoría
+                if (showNewCategoryField) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = newCategoryText,
+                                onValueChange = { newCategoryText = it; newCategoryError = false },
+                                label = { Text("Nueva categoría") },
+                                isError = newCategoryError,
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                colors = fieldColors
+                            )
+                            IconButton(
+                                onClick = {
+                                    val trimmed = newCategoryText.trim()
+                                    when {
+                                        trimmed.isBlank() -> newCategoryError = true
+                                        categories.any { it.second.equals(trimmed, ignoreCase = true) } -> newCategoryError = true
+                                        else -> {
+                                            onAddCategory(trimmed)
+                                            showNewCategoryField = false
+                                            newCategoryText = ""
+                                            // Opcional: seleccionar la nueva categoría automáticamente
+                                            // Necesitaríamos recargar categorías y obtener el ID
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Gold.copy(alpha = 0.15f))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Confirmar",
+                                    tint = Gold,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        if (newCategoryError) {
+                            Text(
+                                text = if (newCategoryText.isBlank()) "El nombre no puede estar vacío"
+                                else "Esta categoría ya existe",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = RedCancel,
+                                modifier = Modifier.padding(start = 4.dp)
                             )
                         }
                     }
